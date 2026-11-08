@@ -15,6 +15,9 @@
   /* Single dark look: a torch-lit fantasy brawler. */
   :root { --bg: #0b0d0a; --fg: #e8e0c8; --gold: #c9a45c; color-scheme: dark; }
   html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; -webkit-touch-callout: none; }
+  /* touch-action is not inherited: every element must opt out of double-tap zoom itself (manipulation keeps tap and scroll) */
+  *, *::before, *::after { touch-action: manipulation; }
+  #game, #game canvas { touch-action: none; }
   #game { position: fixed; inset: 0; }
   #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; background: var(--bg); color: var(--gold); font-family: "Noto Serif TC", serif; font-size: 20px; z-index: 10; text-align: center; padding: 24px; }
   #rotate span { font-size: 48px; }
@@ -5443,6 +5446,20 @@ const ExitGuard = {
     window.addEventListener('beforeunload', e => { if (!this.leaving && this.inPlay()) { e.preventDefault(); e.returnValue = ''; } });
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('gesturestart', e => e.preventDefault()); // iOS pinch zoom
+    ['gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));
+    document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+    // iPhone ignores "no zoom" in the page settings: swallow the second tap of a quick double tap (the game reads touches on
+    // its own, so play is unaffected) and pass it on as a normal click when it landed on a button
+    let lastEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now(), t = e.target;
+      if (now - lastEnd < 350 && e.cancelable && !(t && /INPUT|TEXTAREA|SELECT/.test(t.tagName))) {
+        e.preventDefault();
+        const b = t && t.closest && t.closest('button, a[href], [data-k]'); if (b) b.click();
+      }
+      lastEnd = now;
+    }, { passive: false });
+    document.addEventListener('touchmove', e => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive: false }); // two-finger pinch
   },
   ask() {
     const gm = G.game && G.game.sys && G.game.sys.isActive() ? G.game : null, wasPaused = gm && gm.paused;
@@ -5492,7 +5509,13 @@ window.addEventListener('pageshow', awayOff);
 window.addEventListener('blur', awayOn);
 window.addEventListener('focus', awayOff);
 // after the keyboard / voice input closes, some phones leave the page scrolled or zoomed: snap it back and re-fit
-const snapBack = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); document.documentElement.scrollTop = document.body.scrollTop = 0; try { if (window.__game) window.__game.scale.refresh(); } catch (e) {} };
+// if the page got zoomed in anyway, force the zoom back to 1 by re-applying the viewport settings
+const unzoom = () => {
+  const vv = window.visualViewport; if (!vv || vv.scale < 1.02) return;
+  const m = document.querySelector('meta[name=viewport]'); if (!m) return;
+  const c = m.getAttribute('content'); m.setAttribute('content', c + ', minimum-scale=1'); setTimeout(() => m.setAttribute('content', c), 60);
+};
+const snapBack = () => { unzoom(); if (window.scrollX || window.scrollY) window.scrollTo(0, 0); document.documentElement.scrollTop = document.body.scrollTop = 0; try { if (window.__game) window.__game.scale.refresh(); } catch (e) {} };
 if (window.visualViewport) { window.visualViewport.addEventListener("resize", snapBack); window.visualViewport.addEventListener("scroll", snapBack); }
 // fullscreen (entered when you pick a hero on a phone), rotation and resizes finish their layout late on phones:
 // measure again a few times so the canvas never stays at the old, larger size (zoomed in, buttons off screen)
