@@ -1,4 +1,9 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0b0d0a">
 <title>全員瘋子RPG</title>
 <meta name="description" content="全員瘋子RPG：爆笑橫向闖關動作遊戲。六種職業刷怪打寶，菁英詞綴、連擊、高台戰鬥，主城 NPC 全都是瘋子，連老教主都會把你當惡魔踢倒。">
 <meta property="og:title" content="全員瘋子RPG">
@@ -9,7 +14,7 @@
 <style>
   /* Single dark look: a torch-lit fantasy brawler. */
   :root { --bg: #0b0d0a; --fg: #e8e0c8; --gold: #c9a45c; color-scheme: dark; }
-  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; -webkit-touch-callout: none; }
   #game { position: fixed; inset: 0; }
   #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; background: var(--bg); color: var(--gold); font-family: "Noto Serif TC", serif; font-size: 20px; z-index: 10; text-align: center; padding: 24px; }
   #rotate span { font-size: 48px; }
@@ -124,7 +129,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
 <script>
 "use strict";
-const W = 960, H = 540, GROUND_TOP = 300, GROUND_BOT = 520;
+const H = 540, GROUND_TOP = 300, GROUND_BOT = 520;
+const fitW = () => { const a = window.innerWidth / Math.max(1, window.innerHeight); return a > 1 ? Math.max(960, Math.min(1280, Math.round(H * a / 2) * 2)) : 960; };
+let W = fitW();
+const RX = x => x + (W - 960); // right-anchored UI: positions designed on a 960-wide screen keep their distance from the right edge
 const MAP_Y = -360, MAP_H = 900; // single maps are 900 px high: the painted floor (about 3/4 down the image) lines up with GROUND_TOP
 const FONT = '"Noto Serif TC", "Songti TC", "PMingLiU", serif';
 const G = { game: null, ui: null, msgQ: [] };
@@ -1936,7 +1944,7 @@ class Town extends Phaser.Scene {
     this.hud = this.add.graphics().setScrollFactor(0).setDepth(9500);
     this.hudT = this.add.text(22, 18, '', TXT(14, '#e8e0c8', { lineSpacing: 4 })).setScrollFactor(0).setDepth(9501);
     this.prompt = this.add.text(W / 2, H - 40, '', TXT(16, '#e9c46a', { fontStyle: '900' })).setOrigin(0.5).setScrollFactor(0).setDepth(9501);
-    this.btns = [{ id: 'talk', x: 870, y: 450, r: 44, label: '對話' }, { id: 'char', x: 900, y: 70, r: 28, label: '角色' }, { id: 'back', x: 832, y: 70, r: 28, label: '選角' }];
+    this.btns = [{ id: 'talk', x: RX(870), y: 450, r: 44, label: '對話' }, { id: 'char', x: RX(900), y: 70, r: 28, label: '角色' }, { id: 'back', x: RX(832), y: 70, r: 28, label: '選角' }];
     this.btnT = this.btns.map(b => this.add.text(b.x, b.y, b.label + (this.touch ? '' : ({ talk: '\nA', char: '\nC', back: '\nEsc' })[b.id]), TXT(13, '#f2e6c4', { fontStyle: '900', align: 'center' })).setOrigin(0.5).setScrollFactor(0).setDepth(9502));
     this.input.addPointer(3); this.joy = null;
     this.input.on('pointerdown', ptr => {
@@ -2096,9 +2104,10 @@ class Select extends Phaser.Scene {
   create() {
     this.going = false; this.am = this.cache.json.get('anims');
     BGM.play('select'); this.events.once('shutdown', () => BGM.stop());
-    const bg = this.add.graphics(); bg.fillGradientStyle(0x0e1715, 0x0e1715, 0x2a2219, 0x2a2219, 1); bg.fillRect(0, 0, W, H);
-    this.add.text(W / 2, 30, '全員瘋子RPG', TXT(32, '#e9c46a', { fontStyle: '900' })).setOrigin(0.5);
-    this.add.text(W / 2, 62, IS_TOUCH ? '左右滑動挑選冒險者，選好按「開始冒險」' : '← → 或滑鼠拖曳挑選冒險者，選好按 Enter 或「開始冒險」', TXT(13, '#a99f86')).setOrigin(0.5);
+    const OX = (W - 960) / 2; this.cameras.main.setScroll(-OX, 0);
+    const bg = this.add.graphics(); bg.fillGradientStyle(0x0e1715, 0x0e1715, 0x2a2219, 0x2a2219, 1); bg.fillRect(-OX, 0, W, H);
+    this.add.text(480, 30, '全員瘋子RPG', TXT(32, '#e9c46a', { fontStyle: '900' })).setOrigin(0.5);
+    this.add.text(480, 62, IS_TOUCH ? '左右滑動挑選冒險者，選好按「開始冒險」' : '← → 或滑鼠拖曳挑選冒險者，選好按 Enter 或「開始冒險」', TXT(13, '#a99f86')).setOrigin(0.5);
     // left: the hero's own picture
     this.glow = this.add.graphics();
     this.idxT = this.add.text(240, 96, '', TXT(14, '#a99f86')).setOrigin(0.5);
@@ -2124,12 +2133,13 @@ class Select extends Phaser.Scene {
     for (let i = 0; i < 4; i++) this.statT.push(this.add.text(0, 0, '', TXT(13, '#d8cba8')));
     this.dotG = this.add.graphics();
     if (/[?&]test\b/.test(location.search)) { // developer shortcut, hidden from players
-      const tb = this.add.text(W - 14, 14, '［測試］滿裝滿技能法師', TXT(13, '#ff9a2e', { backgroundColor: '#14110d', padding: { x: 8, y: 5 } })).setOrigin(1, 0);
+      const tb = this.add.text(946, 14, '［測試］滿裝滿技能法師', TXT(13, '#ff9a2e', { backgroundColor: '#14110d', padding: { x: 8, y: 5 } })).setOrigin(1, 0);
       tb.setInteractive().on('pointerup', () => this.maxMage());
     }
-    this.input.on('pointerdown', ptr => { this.down = { x: ptr.x, y: ptr.y }; SFX.resume(); });
+    this.input.on('pointerdown', ptr => { this.down = { x: ptr.worldX, y: ptr.worldY }; SFX.resume(); });
     this.input.on('pointerup', ptr => {
       const d = this.down; this.down = null; if (!d) return;
+      ptr = { x: ptr.worldX, y: ptr.worldY };
       const dx = ptr.x - d.x;
       if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(ptr.y - d.y)) return this.step(dx < 0 ? 1 : -1); // swipe
       const B = this.btn;
@@ -2141,7 +2151,7 @@ class Select extends Phaser.Scene {
     this.i = Math.max(0, CLASS_ORDER.indexOf(Save.shared.lastCls || CLASS_ORDER[0]));
     this.show(0);
   }
-  dotX(k) { return W / 2 - 75 + k * 30; }
+  dotX(k) { return 480 - 75 + k * 30; }
   step(d) { this.i = (this.i + d + 6) % 6; this.show(d); }
   pick(k) { if (k === this.i) return; const d = k > this.i ? 1 : -1; this.i = k; this.show(d); }
   show(dir) {
@@ -5074,11 +5084,11 @@ class UI extends Phaser.Scene {
     this.g = this.add.graphics();
     this.modal = null; this.joy = null;
     const gm = G.game, c = gm.cls;
-    const sc = this.touch ? 1 : 0.8, ax = (x, y, r) => ({ x: W - (W - x) * sc, y: H - (H - y) * sc, r: r * sc });
-    const def = this.touch ? [ // phones / tablets: about 30% bigger, fanned around the attack button
-      ['attack', 874, 458, 58, '攻擊', 'A'], ['jump', 742, 498, 40, '跳', '空白'], ['dodge', 914, 330, 38, c.defName, 'S'],
-      ['s0', 728, 398, 38, c.skills[0].name, 'Q'], ['s1', 758, 304, 38, c.skills[1].name, 'W'], ['s2', 838, 254, 38, c.skills[2].name, 'E'], ['s3', 640, 328, 42, c.skills[3].name, 'R']
-    ] : [
+    const sc = this.touch ? 1 : 0.8, ax = (x, y, r) => ({ x: W - (960 - x) * sc, y: H - (H - y) * sc, r: r * sc });
+    const def = this.touch ? [ // phones / tablets: big but compact, packed against the right edge (x = distance from the right)
+      ['attack', -84, 458, 54, '攻擊', 'A'], ['jump', -206, 494, 36, '跳', '空白'], ['dodge', -44, 350, 33, c.defName, 'S'],
+      ['s0', -198, 386, 34, c.skills[0].name, 'Q'], ['s1', -146, 296, 34, c.skills[1].name, 'W'], ['s2', -62, 262, 33, c.skills[2].name, 'E'], ['s3', -276, 378, 37, c.skills[3].name, 'R']
+    ].map(([id, x, y, r, l, k]) => [id, W + x, y, r, l, k]) : [
       ['attack', 872, 452, 44, '攻擊', 'A'], ['jump', 766, 494, 30, '跳', '空白'], ['dodge', 902, 342, 30, c.defName, 'S'],
       ['s0', 748, 414, 28, c.skills[0].name, 'Q'], ['s1', 772, 334, 28, c.skills[1].name, 'W'], ['s2', 838, 282, 28, c.skills[2].name, 'E'], ['s3', 690, 290, 32, c.skills[3].name, 'R']
     ];
@@ -5100,7 +5110,7 @@ class UI extends Phaser.Scene {
       return b;
     });
     this.g2 = this.add.graphics().setDepth(2); // cooldown sweep drawn above the skill icons
-    const pots = this.touch ? [['red', 648, 228, '補血', '1', 0xd8352a, 32], ['blue', 744, 196, '補魔', '2', 0x2f6ad8, 32]] : [['red', 846, 40, '紅', '1', 0xc8352a, 22], ['blue', 904, 40, '藍', '2', 0x2f63c8, 22]];
+    const pots = this.touch ? [['red', W - 256, 286, '補血', '1', 0xd8352a, 29], ['blue', W - 216, 206, '補魔', '2', 0x2f6ad8, 29]] : [['red', RX(846), 40, '紅', '1', 0xc8352a, 22], ['blue', RX(904), 40, '藍', '2', 0x2f63c8, 22]];
     pots.forEach(([id, x, y, label, key, col, r]) => {
       const b = { id, x, y, r, label, key, col, potion: true };
       b.t = this.add.text(x, y - (this.touch ? 5 : 2), label, TXT(this.touch ? 15 : 14, '#ffffff', { fontStyle: '900', stroke: '#000', strokeThickness: this.touch ? 3 : 0 })).setOrigin(0.5);
@@ -5109,7 +5119,7 @@ class UI extends Phaser.Scene {
       this.btns.push(b);
     });
     { // field bag button (B key)
-      const b = { id: 'bag', x: 788, y: 40, r: 22, label: '包', key: 'B' };
+      const b = { id: 'bag', x: RX(788), y: 40, r: 22, label: '包', key: 'B' };
       b.t = this.add.text(b.x, b.y - 2, '包', TXT(14, '#ffffff', { fontStyle: '900' })).setOrigin(0.5);
       b.k = this.add.text(b.x, b.y + 30, this.touch ? '' : 'B', TXT(11, '#e8e0c8')).setOrigin(0.5);
       b.cd = this.add.text(b.x, b.y + 9, '', TXT(10, '#ffffff')).setOrigin(0.5);
@@ -5279,6 +5289,41 @@ function boot() {
 }
 // unlock audio on the very first user gesture anywhere on the page (browsers block sound until then)
 ['pointerdown', 'keydown', 'touchstart'].forEach(ev => window.addEventListener(ev, () => SFX.resume(), { passive: true }));
+/* accidental-exit guard: the phone's back gesture / back button asks first instead of leaving, refresh and closing the tab
+   warn while you are in town or a stage, and long-press menus are disabled */
+const ExitGuard = {
+  leaving: false,
+  inPlay() { return !!((G.game && G.game.sys && G.game.sys.isActive()) || (G.town && G.town.sys && G.town.sys.isActive())); },
+  init() {
+    try { history.pushState({ guard: 1 }, ''); } catch (e) {}
+    window.addEventListener('popstate', () => {
+      if (this.leaving) return;
+      try { history.pushState({ guard: 1 }, ''); } catch (e) {}
+      if (Panel.open) { Panel.close(); return; } // back = close the open window first
+      this.ask();
+    });
+    window.addEventListener('beforeunload', e => { if (!this.leaving && this.inPlay()) { e.preventDefault(); e.returnValue = ''; } });
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('gesturestart', e => e.preventDefault()); // iOS pinch zoom
+  },
+  ask() {
+    const gm = G.game && G.game.sys && G.game.sys.isActive() ? G.game : null, wasPaused = gm && gm.paused;
+    if (gm) gm.paused = true;
+    Panel.show('要離開遊戲嗎？', body => {
+      body.append(h('div', { class: 'say' }, gm ? '關卡進行中離開，這一關的進度不會保留（已撿到的金幣和裝備會留著）。' : '你的角色和裝備都已經存檔了。'));
+      body.append(h('div', { style: 'display:flex;gap:10px;justify-content:center;margin-top:10px' },
+        h('button', { type: 'button', class: 'primary', on: { click: () => Panel.close() } }, '繼續玩'),
+        h('button', { type: 'button', on: { click: () => { this.leaving = true; Save.write(); history.go(-2); } } }, '離開遊戲')));
+    }, () => { if (gm && !wasPaused) gm.paused = false; });
+  }
+};
+ExitGuard.init();
 const fontReady = (document.fonts && document.fonts.load) ? Promise.race([document.fonts.load('900 20px "Noto Serif TC"', '全員瘋子RPG'), new Promise(r => setTimeout(r, 2500))]) : Promise.resolve();
-fontReady.then(boot, boot);
+// on a phone held upright, wait until it is turned sideways so the game is sized for the landscape screen
+const bootWhenLandscape = () => {
+  if (!IS_TOUCH || window.innerWidth > window.innerHeight) { W = fitW(); boot(); return; }
+  const on = () => { if (window.innerWidth > window.innerHeight) { window.removeEventListener('resize', on); setTimeout(() => { W = fitW(); boot(); }, 250); } };
+  window.addEventListener('resize', on);
+};
+fontReady.then(bootWhenLandscape, bootWhenLandscape);
 </script>
