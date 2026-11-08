@@ -139,7 +139,11 @@
 <script>
 "use strict";
 const H = 540, GROUND_TOP = 300, GROUND_BOT = 520;
-const fitW = () => { const a = window.innerWidth / Math.max(1, window.innerHeight); return a > 1 ? Math.max(960, Math.min(1280, Math.round(H * a / 2) * 2)) : 960; };
+/* the phone keyboard / voice input (tapping the address bar) squeezes the page height for a moment; remember the tallest
+   height seen at this width so the game is never sized (or re-sized) for a squeezed screen */
+const TALL = {};
+const tallH = () => { const k = Math.round(window.innerWidth / 20); TALL[k] = Math.max(TALL[k] || 0, window.innerHeight); return TALL[k]; };
+const fitW = () => { const a = window.innerWidth / Math.max(1, tallH()); return a > 1 ? Math.max(960, Math.min(1280, Math.round(H * a / 2) * 2)) : 960; };
 let W = fitW();
 const RX = x => x + (W - 960);
 const ART_S = 1.6, BOSS_S = 1.2, TOWN_S = 1.4; // right-anchored UI: positions designed on a 960-wide screen keep their distance from the right edge
@@ -240,7 +244,8 @@ const SFX = (() => {
     bash: 'shield', roar: 'roar', wall: 'shield', ram: 'charge', holyslash: 'holy', heal: 'holy', aegis: 'holy', judge: 'holy',
     flurry: 'slash', leap: 'charge', bloodlust: 'blood', frenzy: 'roar', triple: 'bow', backshot: 'bow', blast: 'fire', rain: 'rain' };
   return {
-    resume() { init(); if (ctx && ctx.state === 'suspended') ctx.resume(); },
+    resume() { init(); if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {}); }, // also 'interrupted' (iOS, after the mic / voice input was used)
+    suspend() { if (ctx && ctx.state === 'running') ctx.suspend().catch(() => {}); },
     loadVoice,
     tick() { if (ctx) blip(880 + Math.random() * 120, 640, 0.025, 0.06); }, // typewriter blip for dialogue text
     // grunt voice clips: throttled so being hit repeatedly doesn't turn into a babble
@@ -820,7 +825,7 @@ const PanelKeys = {
     const it = this.items(); document.querySelectorAll('#pbody .kfoc').forEach(el => el.classList.remove('kfoc'));
     if (!it.length) return;
     this.idx = ((i % it.length) + it.length) % it.length; const el = it[this.idx];
-    el.classList.add('kfoc'); try { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+    el.classList.add('kfoc'); if (IS_TOUCH) return; try { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'nearest' }); } catch (e) {} // keyboard only: on phones focusing / scrolling can shift the page
   }
 };
 window.addEventListener('keydown', e => { // on window (capture) like the panel's key blocker, so it actually receives the keys
@@ -5453,11 +5458,15 @@ const ExitGuard = {
 ExitGuard.init();
 // if the screen shape changes a lot after loading (rotated, or an app viewer resized the page), re-fit the game width:
 // safe outside a stage (the select screen and town are always saved), so reload there; mid-stage keep playing as is
-let refitT = null;
+// only a real turn of the screen (the width changes) counts: the keyboard or voice input from tapping the address bar only
+// squeezes the height, and reloading then would cut the game off while it loads
+let refitT = null, bootIW = window.innerWidth;
 window.addEventListener('resize', () => {
-  clearTimeout(refitT);
+  clearTimeout(refitT); tallH();
   refitT = setTimeout(() => {
-    if (!window.__game || Math.abs(fitW() - W) < 40 || (IS_TOUCH && window.innerWidth < window.innerHeight)) return;
+    if (!window.__game || Math.abs(window.innerWidth - bootIW) < 60 || Math.abs(fitW() - W) < 40 || (IS_TOUCH && window.innerWidth < window.innerHeight)) return;
+    if (Date.now() - fsT < 2500 || document.fullscreenElement || document.webkitFullscreenElement) return; // going fullscreen is not a new screen
+    if (document.hidden || (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) return;
     if (G.game && G.game.sys && G.game.sys.isActive()) return;
     ExitGuard.leaving = true; Save.write(); location.reload();
   }, 700);
@@ -5465,9 +5474,31 @@ window.addEventListener('resize', () => {
 const fontReady = (document.fonts && document.fonts.load) ? Promise.race([document.fonts.load('900 20px "Noto Serif TC"', '全員瘋子RPG'), new Promise(r => setTimeout(r, 2500))]) : Promise.resolve();
 // on a phone held upright, wait until it is turned sideways so the game is sized for the landscape screen
 const bootWhenLandscape = () => {
-  if (!IS_TOUCH || window.innerWidth > window.innerHeight) { W = fitW(); boot(); return; }
-  const on = () => { if (window.innerWidth > window.innerHeight) { window.removeEventListener('resize', on); setTimeout(() => { W = fitW(); boot(); }, 250); } };
+  if (!IS_TOUCH || window.innerWidth > window.innerHeight) { W = fitW(); bootIW = window.innerWidth; boot(); return; }
+  const on = () => { if (window.innerWidth > window.innerHeight) { window.removeEventListener('resize', on); setTimeout(() => { W = fitW(); bootIW = window.innerWidth; boot(); }, 250); } };
   window.addEventListener('resize', on);
 };
 fontReady.then(bootWhenLandscape, bootWhenLandscape);
+/* leaving the page for a moment (address bar, voice input, another app): mute and release the speaker so the microphone
+   gets it cleanly, then pick the sound back up and re-fit the canvas on return */
+const awayOn = () => { if (BGM.a) BGM.a.pause(); SFX.suspend(); };
+const awayOff = () => {
+  if (document.hidden) return;
+  SFX.resume(); BGM.kick(); snapBack();
+};
+document.addEventListener('visibilitychange', () => document.hidden ? awayOn() : awayOff());
+window.addEventListener('pagehide', awayOn);
+window.addEventListener('pageshow', awayOff);
+window.addEventListener('blur', awayOn);
+window.addEventListener('focus', awayOff);
+// after the keyboard / voice input closes, some phones leave the page scrolled or zoomed: snap it back and re-fit
+const snapBack = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); document.documentElement.scrollTop = document.body.scrollTop = 0; try { if (window.__game) window.__game.scale.refresh(); } catch (e) {} };
+if (window.visualViewport) { window.visualViewport.addEventListener("resize", snapBack); window.visualViewport.addEventListener("scroll", snapBack); }
+// fullscreen (entered when you pick a hero on a phone), rotation and resizes finish their layout late on phones:
+// measure again a few times so the canvas never stays at the old, larger size (zoomed in, buttons off screen)
+let fsT = 0;
+const refitSoon = () => [80, 350, 900, 1600].forEach(t => setTimeout(snapBack, t));
+['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => { fsT = Date.now(); refitSoon(); }));
+window.addEventListener('orientationchange', refitSoon);
+window.addEventListener('resize', refitSoon);
 </script>
