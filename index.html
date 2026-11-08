@@ -138,6 +138,17 @@
 <div id="panel" hidden><div class="pbox" role="dialog" aria-modal="true" aria-labelledby="ptitle"><header><h2 id="ptitle"></h2><button id="pclose" type="button">關閉（Esc）</button></header><div class="pbody" id="pbody"></div></div></div>
 <div id="dlg" hidden><img id="dlgL" alt=""><img id="dlgR" alt=""><div class="dbox"><div id="dlgName"></div><div id="dlgText"></div><div class="dhint">▼</div><button id="dlgSkip" type="button">跳過 ▶▶</button></div></div>
 <div id="rotate"><span>⟲</span>請把手機轉成橫向來玩</div>
+<script>
+/* opened inside LINE's own browser (it zooms and squeezes the game): LINE's official switch reopens the page in the
+   phone's real browser (Safari / Chrome) */
+(function () {
+  try {
+    if (/(^|\s)Line\//i.test(navigator.userAgent) && !/openExternalBrowser/.test(location.search)) {
+      const u = new URL(location.href); u.searchParams.set('openExternalBrowser', '1'); location.replace(u.toString());
+    }
+  } catch (e) {}
+})();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
 <script>
 "use strict";
