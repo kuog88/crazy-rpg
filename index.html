@@ -2283,6 +2283,7 @@ class Game extends Phaser.Scene {
   }
   fxSprite(key, x, y, o) {
     if (!this.textures.exists(key)) return false;
+    o = Object.assign({}, o, { sx: o.sx * ART_S, sy: o.sy * ART_S }); // visuals match the bigger characters
     const s = this.add.image(x, y, key).setBlendMode(Phaser.BlendModes.ADD).setDepth(o.depth || 8500).setRotation(o.rot || 0).setScale(o.sx, o.sy);
     if (o.tint) s.setTint(o.tint);
     if (o.vx) this.tweens.add({ targets: s, x: x + o.vx, duration: (o.dur || 0.18) * 1000 });
@@ -4235,7 +4236,7 @@ class Game extends Phaser.Scene {
       lg.fillStyle(0xff3a2a, 0.12 + 0.3 * k); lg.fillEllipse(L.tx, gy, L.r * 2 * k, L.r * 0.9 * k);
       if (L.noFly) continue;
       const x = lerp(L.sx, L.tx, k), y = lerp(L.sy, gy - 20, k) - Math.sin(k * Math.PI) * 150;
-      const img = this.sprOf(L, L.key, x, y, 0.22, 9000);
+      const img = this.sprOf(L, L.key, x, y, 0.22 * ART_S, 9000);
       if (img) { img.setRotation(L.t * 8).setBlendMode(Phaser.BlendModes.ADD); if (L.tint) img.setTint(L.tint); }
       else { fx.fillStyle(0xff8a5a, 1); fx.fillCircle(x, y, 10); }
     }
@@ -4686,8 +4687,8 @@ class Game extends Phaser.Scene {
 
   /* ---------- effects helpers ---------- */
   slashFx(p, a0, a1, r, color, width) {
-    const f = p.face, cx = p.x + f * 8, cy = p.y - p.z - (this.useArt ? 62 : 46);
-    if (this.useArt) r *= 1.25;
+    const f = p.face, cx = p.x + f * 8 * ART_S, cy = p.y - p.z - (this.useArt ? 62 : 46) * ART_S;
+    if (this.useArt) r *= 1.25; r *= ART_S;
     const fxKey = { warrior: 'fx_slash_warrior', shield: 'fx_slash_shield', paladin: 'fx_slash_paladin', berserker: 'fx_slash_berserker' }[this.clsKey];
     if (fxKey && this.textures.exists(fxKey)) {
       const sc = r / 150, heavy = width >= 10;
@@ -5114,16 +5115,21 @@ class Game extends Phaser.Scene {
     if (imgKey && this.textures.exists(imgKey)) {
       if (!pr.img) {
         pr.img = this.add.image(x, y, imgKey).setBlendMode(Phaser.BlendModes.ADD).setDepth(8400)
-          .setScale({ darkbolt: 0.34, venom: 0.4, shadow: 0.3, bolt: pr.r < 13 ? 0.2 : 0.27, arrow: 0.3, barrow: 0.42, eyebolt: pr.big ? 0.3 : 0.17, charm: 0.42 }[pr.kind]);
+          .setScale({ darkbolt: 0.34, venom: 0.4, shadow: 0.3, bolt: pr.r < 13 ? 0.2 : 0.27, arrow: 0.3, barrow: 0.42, eyebolt: pr.big ? 0.3 : 0.17, charm: 0.42 }[pr.kind] * ART_S);
         if (pr.kind === 'barrow') pr.img.setTint(0xffb060);
         if (pr.kind === 'venom') pr.img.setTint(0xe0a0ff);
         if (pr.kind === 'shadow') pr.img.setTint(0xff7ad8);
       }
       // the eye-orb doesn't point along its path; it spins slowly instead
       pr.img.setPosition(x, y).setRotation(pr.kind === 'eyebolt' ? Math.sin(pr.t * 3) * 0.3 : Math.atan2(pr.vy, pr.vx));
-      g.fillStyle(0x000000, 0.25); g.fillEllipse(pr.x, pr.y, 18, 6);
+      g.fillStyle(0x000000, 0.25); g.fillEllipse(pr.x, pr.y, 18 * ART_S, 6 * ART_S);
       return;
     }
+    g.save(); g.translateCanvas(x, y); g.scaleCanvas(ART_S, ART_S); g.translateCanvas(-x, -y); // hand-drawn projectiles: same scale-up
+    this.drawProjShape(g, pr, x, y);
+    g.restore();
+  }
+  drawProjShape(g, pr, x, y) {
     if (pr.kind === 'bolt') { g.fillStyle(0x9fb8ff, 0.3); g.fillCircle(x - pr.vx * 0.02, y - pr.vy * 0.02, 14); g.fillStyle(0xbfd0ff, 0.5); g.fillCircle(x, y, 10); g.fillStyle(0xffffff, 1); g.fillCircle(x, y, 5); }
     else if (pr.kind === 'fire') { g.fillStyle(0xff5a1a, 0.35); g.fillCircle(x - pr.vx * 0.03, y, 20); g.fillStyle(0xff9a3a, 1); g.fillCircle(x, y, 13 + Math.sin(pr.t * 40) * 2); g.fillStyle(0xfff0b0, 1); g.fillCircle(x + Math.sign(pr.vx) * 3, y, 6); }
     else if (pr.kind === 'arrow' || pr.kind === 'barrow') {
