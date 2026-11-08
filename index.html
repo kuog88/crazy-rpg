@@ -5169,7 +5169,7 @@ class UI extends Phaser.Scene {
           b.img = this.add.image(b.x, b.y, tk); b.img.setDisplaySize(b.r * 2.1, b.r * 2.1).setMask(mg.createGeometryMask()); b.stage = -1;
         }
       }
-      b.t = this.add.text(b.x, b.img ? b.y + b.r + 10 : b.y, label, TXT((label.length > 2 ? 11 : 14) + (this.touch ? 2 : 0), '#f2e6c4', { fontStyle: '900', stroke: '#000', strokeThickness: 4 })).setOrigin(0.5);
+      b.t = this.add.text(b.x, b.img || (this.touch && id === 'jump') ? b.y + b.r + 10 : b.y, label, TXT((label.length > 2 ? 11 : 14) + (this.touch ? 2 : 0), '#f2e6c4', { fontStyle: '900', stroke: '#000', strokeThickness: 4 })).setOrigin(0.5);
       b.k = this.add.text(b.x + b.r * 0.62, b.y + b.r * 0.62, this.touch ? '' : key, TXT(10, '#ffe9a8', { fontStyle: '900', stroke: '#000', strokeThickness: 3 })).setOrigin(0.5);
       b.cd = this.add.text(b.x, b.img ? b.y : b.y + b.r * 0.42, '', TXT(b.img ? 16 : 11, '#ffffff', { fontStyle: '900', stroke: '#000', strokeThickness: 4 })).setOrigin(0.5).setDepth(3);
       b.k.setDepth(3);
@@ -5320,21 +5320,26 @@ class UI extends Phaser.Scene {
       let ready = true, frac = 0, cdText = '', count = '';
       if (bt.potion) {
         const cd = p.potCd[bt.id], have = gm.potCount(bt.id); frac = cd / 15; ready = cd <= 0 && have > 0; cdText = cd > 0 ? Math.ceil(cd) + '' : ''; count = (this.touch ? (cd > 0 ? '' : '×' + have) : have + ' ・' + bt.key);
-        g.fillStyle(bt.col, ready ? (this.touch ? 0.55 : 0.9) : 0.28); g.fillCircle(bt.x, bt.y, bt.r);
-        if (this.touch) { g.lineStyle(3, ready ? 0xffffff : 0x888888, ready ? 0.7 : 0.35); g.strokeCircle(bt.x, bt.y, bt.r); }
+        g.fillStyle(bt.col, ready ? (this.touch ? 0.4 : 0.9) : (this.touch ? 0.18 : 0.28)); g.fillCircle(bt.x, bt.y, bt.r);
+        if (this.touch) { g.lineStyle(3, ready ? 0xffffff : 0x888888, ready ? 0.55 : 0.25); g.strokeCircle(bt.x, bt.y, bt.r); }
       } else {
         if (bt.id[0] === 's') { const i = +bt.id[1], cost = gm.skillCost(i); frac = p.cds[i] / gm.skillCd(i); ready = p.cds[i] <= 0 && p.mp >= cost; cdText = p.cds[i] > 0 ? Math.ceil(p.cds[i]) + '' : (p.mp < cost ? '缺魔' : ''); }
         else if (bt.id === 'dodge') { frac = p.defCd / c.defCD; ready = p.defCd <= 0; }
         const held = TOUCH.held[bt.id];
-        g.fillStyle(0x14110d, this.touch ? (held ? 0.55 : 0.26) : (held ? 0.9 : 0.6)); g.fillCircle(bt.x, bt.y, bt.r);
+        g.fillStyle(0x14110d, this.touch ? (held ? 0.4 : 0.11) : (held ? 0.9 : 0.6)); g.fillCircle(bt.x, bt.y, bt.r);
+        if (bt.id === 'jump' && this.touch) { // footprint icon
+          const a = held ? 0.9 : 0.6, fx = bt.x - 2, fy = bt.y + 4, k = bt.r / 36;
+          g.fillStyle(0xf2e6c4, a); g.fillEllipse(fx, fy + 4 * k, 16 * k, 26 * k); g.fillEllipse(fx + 1 * k, fy - 9 * k, 13 * k, 12 * k);
+          [[-6, -20, 4.2], [-1, -23, 3.6], [4, -22, 3.3], [8, -19, 2.9], [11, -15, 2.5]].forEach(([dx, dy, rr]) => g.fillCircle(fx + dx * k, fy + dy * k, rr * k));
+        }
         if (bt.img) {
           const i = +bt.id[1], st = skillStage(gm.skillLv(i));
           if (st !== bt.stage) { const k2 = `sk_${gm.clsKey}_${i}_${st}`; if (this.textures.exists(k2)) bt.img.setTexture(k2).setDisplaySize(bt.r * 2.1, bt.r * 2.1); bt.stage = st; }
-          bt.img.setAlpha(this.touch ? (ready ? (held ? 0.95 : 0.72) : 0.38) : (ready ? (held ? 0.8 : 1) : 0.55));
+          bt.img.setAlpha(this.touch ? (ready ? (held ? 0.9 : 0.57) : 0.3) : (ready ? (held ? 0.8 : 1) : 0.55));
           g2.lineStyle(3, ready ? [0xc9a45c, 0xd8e0ff, 0xffd76a][st] : 0x5a5040, ready ? 1 : 0.6); g2.strokeCircle(bt.x, bt.y, bt.r);
-        } else { g.lineStyle(this.touch ? 3 : 2, ready ? 0xc9a45c : 0x5a5040, ready ? (this.touch ? 0.75 : 0.9) : 0.5); g.strokeCircle(bt.x, bt.y, bt.r); }
+        } else { g.lineStyle(this.touch ? 3 : 2, ready ? 0xc9a45c : 0x5a5040, ready ? (this.touch ? 0.6 : 0.9) : (this.touch ? 0.3 : 0.5)); g.strokeCircle(bt.x, bt.y, bt.r); }
       }
-      if (frac > 0) { const gg2 = bt.img ? g2 : g; gg2.fillStyle(0x000000, 0.6); gg2.slice(bt.x, bt.y, bt.r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac, false); gg2.fillPath(); }
+      if (frac > 0) { const gg2 = bt.img ? g2 : g; gg2.fillStyle(0x000000, this.touch ? 0.3 : 0.6); gg2.slice(bt.x, bt.y, bt.r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac, false); gg2.fillPath(); }
       bt.t.setAlpha(ready ? 1 : 0.5); bt.cd.setText(cdText);
       if (bt.potion) bt.k.setText(count);
     }
