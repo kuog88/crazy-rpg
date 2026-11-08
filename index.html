@@ -98,7 +98,7 @@
   @keyframes dlgBobR { 30% { transform: scaleX(-1) translateY(-8px); } }
   #dlg .dbox { position: absolute; z-index: 1; left: 50%; bottom: max(14px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(720px, 54vw); min-height: 112px; box-sizing: border-box; padding: 14px 18px 18px; background: rgba(16,12,8,.92); border: 2px solid var(--gold, #c9a45c); border-radius: 12px; color: #f2e6c4; box-shadow: 0 8px 30px rgba(0,0,0,.6); }
   #dlgName { display: inline-block; margin: -30px 0 6px -4px; padding: 3px 14px; background: #3a2e1d; border: 2px solid var(--gold, #c9a45c); border-radius: 8px; font-weight: 900; color: #ffe9a8; }
-  #dlgText { font-size: clamp(15px, 2.2vw, 19px); line-height: 1.6; min-height: 3.2em; white-space: pre-wrap; }
+  #dlgText { font-size: clamp(15px, 2.2vw, 19px); line-height: 1.6; min-height: 3.2em; white-space: pre-wrap; text-align: center; padding: 0 6%; }
   #dlg .dhint { position: absolute; right: 16px; bottom: 8px; color: #e9c46a; animation: dlgHint 1s infinite; }
   @keyframes dlgHint { 50% { opacity: .2; } }
   #dlgSkip { position: absolute; z-index: 3; right: 10px; top: -34px; font: inherit; font-size: 12px; color: #f2e6c4; background: rgba(40,30,20,.85); border: 1px solid #c9a45c; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
@@ -139,7 +139,8 @@
 const H = 540, GROUND_TOP = 300, GROUND_BOT = 520;
 const fitW = () => { const a = window.innerWidth / Math.max(1, window.innerHeight); return a > 1 ? Math.max(960, Math.min(1280, Math.round(H * a / 2) * 2)) : 960; };
 let W = fitW();
-const RX = x => x + (W - 960); // right-anchored UI: positions designed on a 960-wide screen keep their distance from the right edge
+const RX = x => x + (W - 960);
+const ART_S = 1.6, BOSS_S = 1.2, TOWN_S = 1.4; // right-anchored UI: positions designed on a 960-wide screen keep their distance from the right edge
 const MAP_Y = -360, MAP_H = 900; // single maps are 900 px high: the painted floor (about 3/4 down the image) lines up with GROUND_TOP
 const FONT = '"Noto Serif TC", "Songti TC", "PMingLiU", serif';
 const G = { game: null, ui: null, msgQ: [] };
@@ -1794,7 +1795,7 @@ const Tut = {
     if (npc) {
       const sx = (npc.x - town.cam.scrollX) * k + r.left, half = this.el.offsetWidth / 2 + 6;
       this.el.classList.add('above');
-      this.el.style.left = Math.max(r.left + half, Math.min(r.right - half, sx)) + 'px'; this.el.style.top = (r.top + (npc.y - 214) * k) + 'px';
+      this.el.style.left = Math.max(r.left + half, Math.min(r.right - half, sx)) + 'px'; this.el.style.top = (r.top + (npc.y - 236 * TOWN_S) * k) + 'px';
     } else { this.el.classList.remove('above'); this.el.style.left = (r.left + r.width / 2) + 'px'; this.el.style.top = (r.top + r.height * 0.13) + 'px'; }
     this.el.style.visibility = Dialog.open || Panel.open ? 'hidden' : 'visible'; // never on top of a conversation or a shop window
   },
@@ -1934,11 +1935,11 @@ class Town extends Phaser.Scene {
     this.fxG = this.add.graphics().setDepth(8000);
     this.npcs = NPCS.map(n => {
       const o = { ...n, y: 360 };
-      if (this.textures.exists(n.key)) o.img = this.add.image(n.x, o.y, n.key).setOrigin(0.5, 1).setScale(0.5).setDepth(o.y + 10);
-      o.label = this.add.text(n.x, o.y - 132, n.name, TXT(14, '#f2e6c4', { fontStyle: '900' })).setOrigin(0.5).setDepth(9000);
+      if (this.textures.exists(n.key)) o.img = this.add.image(n.x, o.y, n.key).setOrigin(0.5, 1).setScale(0.5 * TOWN_S).setDepth(o.y + 10);
+      o.label = this.add.text(n.x, o.y - 132 * TOWN_S, n.name, TXT(14, '#f2e6c4', { fontStyle: '900' })).setOrigin(0.5).setDepth(9000);
       // role badge over each NPC's head (falls back to a '!' if the icon is missing)
-      o.alert = this.add.text(n.x, o.y - 200, '！', TXT(32, '#ff4a3a', { fontStyle: '900', strokeThickness: 6 })).setOrigin(0.5).setDepth(9001).setVisible(false);
-      o.mark = this.textures.exists('icon_' + n.menu) ? this.add.image(n.x, o.y - 160, 'icon_' + n.menu).setScale(0.5).setDepth(9000) : this.add.text(n.x, o.y - 154, '！', TXT(18, '#e9c46a', { fontStyle: '900' })).setOrigin(0.5).setDepth(9000);
+      o.alert = this.add.text(n.x, o.y - 206 * TOWN_S, '！', TXT(32, '#ff4a3a', { fontStyle: '900', strokeThickness: 6 })).setOrigin(0.5).setDepth(9001).setVisible(false);
+      o.mark = this.textures.exists('icon_' + n.menu) ? this.add.image(n.x, o.y - 160 * TOWN_S, 'icon_' + n.menu).setScale(0.5).setDepth(9000) : this.add.text(n.x, o.y - 154, '！', TXT(18, '#e9c46a', { fontStyle: '900' })).setOrigin(0.5).setDepth(9000);
       return o;
     });
     this.makeDonation();
@@ -1982,7 +1983,7 @@ class Town extends Phaser.Scene {
     }
     this.led = null;
     if (!this.textures.exists('town_banner')) return;
-    const elder = NPCS.find(n => n.menu === 'elder'), BW = 230, src = this.textures.get('town_banner').getSourceImage(), sc = BW / src.width, BH = src.height * sc, bx = elder.x, by = 66; // hangs in the street above the old bishop
+    const elder = NPCS.find(n => n.menu === 'elder'), BW = 230, src = this.textures.get('town_banner').getSourceImage(), sc = BW / src.width, BH = src.height * sc, bx = elder.x, by = 2; // hangs in the street above the old bishop
     this.add.image(bx, by, 'town_banner').setOrigin(0.5, 0).setScale(sc).setDepth(8990)
       .setInteractive({ useHandCursor: true }).on('pointerup', () => { if (!Panel.open && !Dialog.open) openDonate(); });
     const box = { x: bx - BW / 2 + BW * 0.205, y: by + BH * 0.4, w: BW * 0.59, h: BH * 0.3 };
@@ -2047,22 +2048,22 @@ class Town extends Phaser.Scene {
     if (this.bg) this.bg.tilePositionX = sx * 0.6; if (this.gr) this.gr.tilePositionX = sx;
     if (this.meta) {
       const a = this.meta.anims[p.moving ? 'run' : 'idle'], kf = Math.floor(p.t * a.fps) % a.f.length;
-      this.spr.setFrame(a.f[kf]).setScale(this.meta.scale * p.face, this.meta.scale);
+      this.spr.setFrame(a.f[kf]).setScale(this.meta.scale * TOWN_S * p.face, this.meta.scale * TOWN_S);
     } else this.spr.setScale(0.5 * p.face, 0.5);
     this.spr.setPosition(p.x, p.y).setDepth(p.y + 10);
     if (riding) { // the donkey walks; the hero sits on the saddle showing only the upper body (no extra rider art needed)
       const mm = this.mountMeta;
-      if (mm) { const a = mm.anims[p.moving ? 'walk' : 'idle'], kf = Math.floor(p.t * a.fps) % a.f.length; this.mountSpr.setFrame(a.f[kf]).setScale(mm.scale * p.face, mm.scale); }
-      else this.mountSpr.setScale(0.62 * p.face, 0.62).setY(p.y + (p.moving ? -Math.abs(Math.sin(p.t * 12)) * 4 : 0));
+      if (mm) { const a = mm.anims[p.moving ? 'walk' : 'idle'], kf = Math.floor(p.t * a.fps) % a.f.length; this.mountSpr.setFrame(a.f[kf]).setScale(mm.scale * TOWN_S * p.face, mm.scale * TOWN_S); }
+      else this.mountSpr.setScale(0.62 * TOWN_S * p.face, 0.62 * TOWN_S).setY(p.y + (p.moving ? -Math.abs(Math.sin(p.t * 12)) * 4 : 0));
       this.mountSpr.setPosition(p.x, p.y).setDepth(p.y + 9).setVisible(true);
-      const bob = p.moving ? -Math.abs(Math.sin(p.t * 12)) * 4 : 0, SADDLE = 56, WAIST = 52;
+      const bob = p.moving ? -Math.abs(Math.sin(p.t * 12)) * 4 : 0, SADDLE = 56 * TOWN_S, WAIST = 52 * TOWN_S;
       if (this.meta) {
         const a = this.meta.anims.idle; this.spr.setFrame(a.f[Math.floor(p.t * a.fps) % a.f.length]);
-        this.spr.setCrop(0, 0, this.meta.fw, this.meta.oy * this.meta.fh - WAIST / this.meta.scale);
+        this.spr.setCrop(0, 0, this.meta.fw, this.meta.oy * this.meta.fh - WAIST / (this.meta.scale * TOWN_S));
       }
       this.spr.setPosition(p.x - 8 * p.face, p.y - SADDLE + WAIST + bob);
     } else { if (this.mountSpr) this.mountSpr.setVisible(false); if (this.spr.isCropped) this.spr.setCrop(); }
-    const g = this.groundG; g.clear(); g.fillStyle(0x000000, 0.35); g.fillEllipse(p.x, p.y, riding ? 90 : 40, riding ? 16 : 12);
+    const g = this.groundG; g.clear(); g.fillStyle(0x000000, 0.35); g.fillEllipse(p.x, p.y, (riding ? 90 : 40) * TOWN_S, (riding ? 16 : 12) * TOWN_S);
     // pet follows a little behind the player
     const pid = this.ch.pet, pk = pid && 'it_pet_' + pid;
     if (pk && this.textures.exists(pk)) {
@@ -2076,12 +2077,12 @@ class Town extends Phaser.Scene {
     } else if (this.petSpr) this.petSpr.setVisible(false);
     this.fxG.clear();
     drawAura(g, this.fxG, p.x, p.y, 0, p.t, equipAura(this.ch), [this.spr, this.mountSpr]);
-    for (const n of this.npcs) { g.fillStyle(0x000000, 0.3); g.fillEllipse(n.x, n.y, 50, 12); n.mark.y = n.y - 160 + Math.sin(p.t * 4 + n.x) * 4; if (n.img) n.img.setScale(0.5 * (p.x < n.x ? 1 : -1), 0.5); }
+    for (const n of this.npcs) { g.fillStyle(0x000000, 0.3); g.fillEllipse(n.x, n.y, 50, 12); n.mark.y = n.y - 160 * TOWN_S + Math.sin(p.t * 4 + n.x) * 4; if (n.img) n.img.setScale(0.5 * TOWN_S * (p.x < n.x ? 1 : -1), 0.5 * TOWN_S); }
     const n = this.near();
     for (const o of this.npcs) {
       o.label.setColor(o === n ? '#ffe9a8' : '#f2e6c4');
       const call = o.menu !== 'elder' && this.npcCalls(o), qd = call && !NpcEv.at(o.menu);
-      o.alert.setVisible(call).setText(qd ? '？' : '！').setColor(qd ? '#ffd84a' : '#ff4a3a').setY(o.y - 200 + Math.sin(p.t * 7) * 6);
+      o.alert.setVisible(call).setText(qd ? '？' : '！').setColor(qd ? '#ffd84a' : '#ff4a3a').setY(o.y - 206 * TOWN_S + Math.sin(p.t * 7) * 6);
     }
     this.prompt.setText(this.nearStele() && !Panel.open ? (this.touch ? '點「對話」查看贊助石碑' : '按 A 查看贊助石碑') : n && !Panel.open ? (this.touch ? `點「對話」和${n.name}說話` : `按 A 和${n.name}說話`) + (n.menu !== 'elder' && this.npcCalls(n) ? '（他有事找你！）' : '') : '');
     const ch = this.ch, sh = Save.shared, hd = this.hud; hd.clear();
@@ -2390,7 +2391,7 @@ class Game extends Phaser.Scene {
   }
   createPlayer() {
     const st = this.st;
-    this.player = { kind: 'player', x: 200, y: 420, z: 0, fl: 0, deck: null, vx: 0, vy: 0, vz: 0, face: 1, hw: 16, hd: 14, ht: 75, hp: st.maxHp, maxHp: st.maxHp, mp: st.maxMp, maxMp: st.maxMp, atk: st.atk,
+    this.player = { kind: 'player', x: 200, y: 420, z: 0, fl: 0, deck: null, vx: 0, vy: 0, vz: 0, face: 1, hw: 16 * ART_S, hd: 14, ht: 75 * ART_S, sc: ART_S, hp: st.maxHp, maxHp: st.maxHp, mp: st.maxMp, maxMp: st.maxMp, atk: st.atk,
       state: 'idle', st: 0, t: 0, invuln: 0, flash: 0, cds: [0, 0, 0, 0], defCd: 0, potCd: { red: 0, blue: 0 }, heal: 0, healRate: 0, mana: 0, manaRate: 0,
       buffs: {}, shieldHp: 0, combo: null, skill: null, dodgeT: 9, nextCrit: false, g: this.add.graphics() };
   }
@@ -2598,7 +2599,7 @@ class Game extends Phaser.Scene {
     if (this.cls.melee) SFX.swing();
   }
   comboData(step) {
-    const d = Object.assign({ yTol: 30 }, W_COMBO[step]), w = this.st.wtype;
+    const d = Object.assign({ yTol: 30 }, W_COMBO[step]), w = this.st.wtype; d.range *= 1.3;
     d.mult *= this.cls.cmul || 1;
     if (w === 'great') { d.dur *= 1.3; d.hit *= 1.3; d.range *= 1.3; d.mult *= 1.4; d.kb *= 1.3; d.hs *= 1.3; }
     else if (w === 'spear') { d.range *= 1.55; d.mult *= 0.95; }
@@ -3225,8 +3226,9 @@ class Game extends Phaser.Scene {
   spawnEnemy(type, x, y, elite) {
     const b = ENEMY[type], m = (elite ? 1.3 : 1) * this.stage.mult, sheet = type;
     if (type === 'troll' || type === 'succubus') type = 'boss';
+    const AS = b.mini || type === 'boss' ? BOSS_S : ART_S;
     const e = { kind: type, sheet, noShriek: type !== 'fish', elite, big: !!b.mini, x, y, z: 0, fl: 0, deck: null, vx: 0, vy: 0, vz: 0, face: x > this.player.x ? -1 : 1, hp: b.hp * m, maxHp: b.hp * m, atk: b.atk * m,
-      speed: b.speed * (elite ? 1.1 : 1), hw: b.hw * (elite ? 1.2 : 1), hd: b.hd, ht: b.ht * (elite ? 1.2 : 1), sc: elite ? 1.25 : 1,
+      speed: b.speed * (elite ? 1.1 : 1), hw: b.hw * (elite ? 1.2 : 1) * AS, hd: b.hd, ht: b.ht * (elite ? 1.2 : 1) * AS, sc: (elite ? 1.25 : 1) * AS,
       state: 'chase', st: 0, t: rand(0, 10), cd: rand(0.8, 2), throwCd: rand(1, 3), flash: 0, stun: 0, freeze: 0, armorBreak: 0,
       yOff: rand(-40, 40), entered: false, g: this.add.graphics() };
     if (elite) e.label = this.add.text(x, y - 120, '菁英', TXT(14, '#bff0ff', { fontStyle: '900', strokeThickness: 4 })).setOrigin(0.5).setDepth(9300);
@@ -3502,7 +3504,7 @@ class Game extends Phaser.Scene {
   /* ----- portal mini-boss: venom slime (ranged; long-cooldown poison gas fan that lingers 2 s, long-range venom spit) ----- */
   aiSlime(e, dt) {
     const p = this.player, dx = p.x - e.x, adx = Math.abs(dx);
-    e.spitCd = (e.spitCd === undefined ? 1.5 : e.spitCd) - dt; e.gasCd = (e.gasCd === undefined ? 4 : e.gasCd) - dt;
+    e.spitCd = (e.spitCd === undefined ? 1.5 : e.spitCd) - dt; e.gasCd = (e.gasCd === undefined ? 4 : e.gasCd) - dt; e.slamCd = (e.slamCd === undefined ? 2 : e.slamCd) - dt;
     switch (e.state) {
       case 'intro': e.vx = e.vy = 0; if (e.st > 1.6) this.setState(e, 'chase'); break;
       case 'chase': {
@@ -3511,7 +3513,8 @@ class Game extends Phaser.Scene {
         // keeps its distance: backs off when you get close, creeps in when you're far
         const want = adx < 300 ? e.x - Math.sign(dx) * 140 : adx > 540 ? p.x - Math.sign(dx) * 420 : e.x;
         this.moveToward(e, want, p.y, ENEMY.venomslime.speed * (e.phase2 ? 1.3 : 1));
-        if (e.gasCd <= 0) { e.vx = e.vy = 0; this.setState(e, 'gasW'); }
+        if (e.slamCd <= 0 && adx < 190 && Math.abs(p.y - e.y) < 80) { e.vx = e.vy = 0; this.setState(e, 'slamW2'); } // you got too close: it flattens everything around it
+        else if (e.gasCd <= 0) { e.vx = e.vy = 0; this.setState(e, 'gasW'); }
         else if (e.spitCd <= 0) { e.vx = e.vy = 0; this.setState(e, 'spitW'); }
         break;
       }
@@ -3530,6 +3533,11 @@ class Game extends Phaser.Scene {
           this.addProj({ owner: 'e', kind: 'venom', x: e.x + e.face * 50, y: e.y, z: 70, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.55, r: 18, life: 1.8, dmg: e.atk * 0.85, src: e });
         }
         SFX.magic(); e.spitCd = e.phase2 ? 1.6 : 2.4; this.setState(e, 'recover'); e.recoverDur = 0.6;
+      } break;
+      case 'slamW2': e.vx = e.vy = 0; if (e.st > (e.phase2 ? 0.5 : 0.65)) {
+        SFX.boom(); this.cam.shake(260, 0.016); this.dust(e.x - 60, e.y); this.dust(e.x + 60, e.y); this.ring(e.x, e.y, 170, 0xb06ae0, 0.4, true);
+        if (Math.hypot(p.x - e.x, (p.y - e.y) * 2) < 175 && p.z - p.fl < 60) this.hurtPlayer(e.atk * 0.9, e.x, { kb: 400, launch: 300, src: e });
+        e.slamCd = e.phase2 ? 3 : 4.5; this.setState(e, 'recover'); e.recoverDur = 0.7;
       } break;
       case 'recover': e.vx = e.vy = 0; if (e.st > (e.recoverDur || 0.7)) this.setState(e, 'chase'); break;
       default: this.setState(e, 'chase');
@@ -3700,6 +3708,9 @@ class Game extends Phaser.Scene {
           break;
         }
         this.moveToward(e, p.x + (e.x < p.x ? -1 : 1) * 210, p.y, e.phase2 ? 115 : 95);
+        e.whipCd = (e.whipCd === undefined ? 1 : e.whipCd) - dt; e.waveCd = (e.waveCd === undefined ? 5 : e.waveCd) - dt;
+        if (e.waveCd <= 0 && adx < 200 && ady < 80) { e.vx = e.vy = 0; this.setState(e, 'burstW'); break; }
+        if (e.whipCd <= 0 && adx < 170 && ady < 50) { e.vx = e.vy = 0; e.face = Math.sign(dx) || 1; this.setState(e, 'whipW'); break; }
         if (e.cd <= 0) {
           e.vx = e.vy = 0; e.face = Math.sign(dx) || 1; const r = Math.random();
           if (adx < 190 && ady < 60 && r < 0.5) this.setState(e, 'tailW');
@@ -3709,6 +3720,19 @@ class Game extends Phaser.Scene {
         }
         break;
       }
+      case 'whipW': e.vx = e.vy = 0; if (e.st > 0.22) { SFX.swing(); this.setState(e, 'whip'); e.swept = false; } break;
+      case 'whip':
+        if (!e.swept && e.st > 0.05) {
+          e.swept = true; this.fxSprite('fx_hit', e.x + e.face * 90, e.y - 70, { sx: 0.4, sy: 0.3, tint: 0xff8ae0, dur: 0.16 });
+          if ((p.x - e.x) * e.face > -20 && adx < 160 && ady < 46 && p.z - p.fl < 70) this.hurtPlayer(e.atk * 0.55, e.x, { kb: 180, src: e });
+        }
+        if (e.st > 0.3) { this.setState(e, 'chase'); e.whipCd = e.phase2 ? 1.1 : 1.6; } break;
+      case 'burstW': e.vx = e.vy = 0; if (e.st > (e.phase2 ? 0.55 : 0.7)) {
+        SFX.magic(); SFX.boom(); this.cam.shake(220, 0.012); this.ring(e.x, e.y, 200, 0xff6ad8, 0.45, true);
+        this.fxSprite('fx_charm', e.x, e.y - 90, { sx: 0.7, sy: 0.7, dur: 0.35, grow: 2 });
+        if (Math.hypot(p.x - e.x, (p.y - e.y) * 2) < 205 && p.z - p.fl < 80) this.hurtPlayer(e.atk * 0.8, e.x, { kb: 460, launch: 280, src: e });
+        e.waveCd = e.phase2 ? 4.5 : 6.5; this.setState(e, 'recover'); e.recoverDur = 0.45;
+      } break;
       case 'tailW': e.vx = e.vy = 0; if (e.st > (e.quick ? 0.25 : e.phase2 ? 0.4 : 0.5)) { e.quick = false; e.swept = false; this.setState(e, 'tail'); SFX.swing(); } break;
       case 'tail':
         if (!e.swept && e.st > 0.06) {
@@ -3884,7 +3908,7 @@ class Game extends Phaser.Scene {
   }
 
   /* ---------- projectiles, loot, traps, crates ---------- */
-  addProj(o) { o.t = 0; if (o.pierce) o.inst = new Set(); if (o.owner === 'p' && this.player.fl) o.z = (o.z || 0) + this.player.fl; this.projs.push(o); }
+  addProj(o) { o.t = 0; if (o.pierce) o.inst = new Set(); if (o.z) o.z *= ART_S; if (o.owner === 'p' && this.player.fl) o.z = (o.z || 0) + this.player.fl; this.projs.push(o); }
   nearestEnemy(x, y, range, f) {
     let best = null, bd = 1e9;
     for (const e of this.enemies) { if (e.dead || e.state === 'intro') continue; const dx = e.x - x; if (dx * f < -20) continue; const d = Math.hypot(dx, (e.y - y) * 1.5); if (d < range && d < bd) { bd = d; best = e; } }
@@ -3927,7 +3951,7 @@ class Game extends Phaser.Scene {
         }
         for (const cr of this.crates) if (!cr.dead && !pr.dead && Math.abs(cr.x - pr.x) < pr.r + 18 && Math.abs(cr.y - pr.y) < 26) { this.breakCrate(cr); if (!pr.pierce) pr.dead = true; }
       } else if (p.state !== 'dead') {
-        if (Math.abs(p.x - pr.x) < pr.r + p.hw && Math.abs(p.y - pr.y) < p.hd + 14 && Math.abs(p.z + 35 - pr.z) < (pr.charm ? 75 : 55)) {
+        if (Math.abs(p.x - pr.x) < pr.r + p.hw && Math.abs(p.y - pr.y) < p.hd + 14 && Math.abs(p.z + 35 * ART_S - pr.z) < (pr.charm ? 75 : 55) * ART_S) {
           const hit = pr.charm && pr.src && !pr.src.dead ? this.charmPlayer(pr.src, pr.dmg) : this.hurtPlayer(pr.dmg, pr.x - Math.sign(pr.vx) * 10, { kb: 160, src: pr.src });
           if (hit) {
             pr.dead = true;
@@ -4173,6 +4197,7 @@ class Game extends Phaser.Scene {
     }
     for (const e of this.enemies) {
       if (e.dead) continue;
+      if (e.state === 'slamW2' || e.state === 'burstW') { const R = e.state === 'slamW2' ? 175 : 205, pul = 0.15 + Math.abs(Math.sin(this.simTime * 12)) * 0.2; gg.fillStyle(e.state === 'slamW2' ? 0xb06ae0 : 0xff4ab0, pul); gg.fillEllipse(e.x, e.y, R * 2, R); gg.lineStyle(2, 0xff6a8a, 0.8); gg.strokeEllipse(e.x, e.y, R * 2, R); }
       if (e.state === 'fuse') { const k = Math.min(1, e.st / 0.9), lg = e.fl ? this.deckFx : gg, y = e.y - e.fl; lg.lineStyle(3, 0xff5a2a, 0.9); lg.strokeEllipse(e.x, y, 230, 104); lg.fillStyle(0xff3a2a, 0.12 + 0.35 * k); lg.fillEllipse(e.x, y, 230 * k, 104 * k); }
       if (e.shieldHp > 0) { const a = 0.35 + 0.25 * Math.sin(this.simTime * 6), cy = e.y - e.z - e.ht * 0.5; fx.lineStyle(3, 0xcfe8ff, a); fx.strokeEllipse(e.x, cy, e.hw * 3, e.ht * 1.25); fx.fillStyle(0x9fd8ff, a * 0.25); fx.fillEllipse(e.x, cy, e.hw * 3, e.ht * 1.25); }
     }
@@ -4349,7 +4374,7 @@ class Game extends Phaser.Scene {
     if (T.step === 'intro' && T.t > 0.8) {
       T.step = 'wait';
       { const who = { E: 'elder', H: this.clsKey, G: 'npc_guard' }; for (const [w, e] of TRIAL.ambush[this.clsKey]) Dialog.preload({ who: who[w], e }); for (const e of ['n', 'angry', 'shock', 'sigh']) Dialog.preload({ who: this.clsKey, e }); }
-      this.trGuard = this.add.image(W + 90, 430, 'npc_guard').setOrigin(0.5, 1).setScale(0.5).setDepth(440);
+      this.trGuard = this.add.image(W + 90, 430, 'npc_guard').setOrigin(0.5, 1).setScale(0.5 * TOWN_S).setDepth(440);
       this.tweens.add({ targets: this.trGuard, x: W - 70, duration: 900, ease: 'Quad.out', onComplete: () => {
         const L = TRIAL.guard[this.clsKey];
         this.say([G1('angry', L[0]), H('n', L[1]), G1('n', '哼，嘴巴倒是很厲害。旁邊有幾隻訓練用的魚人，我一招一招教你，給我照做！'), G1('n', TRIAL.drill[this.clsKey][0])], () => { T.step = 'practice'; this.trialDrill(); });
@@ -4397,7 +4422,7 @@ class Game extends Phaser.Scene {
   trialAmbush() {
     const p = this.player, who = { E: 'elder', H: this.clsKey, G: 'npc_guard' };
     p.vx = p.vy = 0; this.setState(p, 'idle');
-    const el = this.trElder = this.add.image(W + 120, p.y + 2, 'npc_elder').setOrigin(0.5, 1).setScale(0.5).setDepth(p.y + 11);
+    const el = this.trElder = this.add.image(W + 120, p.y + 2, 'npc_elder').setOrigin(0.5, 1).setScale(0.5 * TOWN_S).setDepth(p.y + 11);
     this.floatText(W - 140, p.y - 150, '惡魔！！！', '#ff6a4a');
     this.tweens.add({ targets: el, x: p.x + 60, duration: 380, ease: 'Quad.in', onComplete: () => {
       SFX.boom(); this.cam.shake(320, 0.022); this.hitstop = 0.12; this.cam.flash(120, 255, 255, 255);
@@ -4929,6 +4954,7 @@ class Game extends Phaser.Scene {
       case 'drop': name = e.kind === 'wolf' ? 'pounce' : 'fall'; prog = 0.4; break;
       case 'castW': name = 'castW'; prog = t / 0.6; ps.tint = red; break;
       case 'fuse': name = 'hurt'; prog = 0.35; break;
+      case 'slamW2': name = 'castW'; prog = Math.min(0.99, t / 0.65); ps.tint = red; break;
       case 'sentryW': name = e.sheet === 'fish' ? 'throwW' : 'castW'; prog = t / 0.6; ps.tint = red; break;
       case 'sentry': name = e.sheet === 'fish' ? 'throwRec' : 'cast'; prog = Math.min(0.99, t / 0.45); break;
       case 'cast': name = 'cast'; prog = t / 0.75; break;
@@ -4960,7 +4986,7 @@ class Game extends Phaser.Scene {
       else if (e.state === 'enrage') { name = 'roar'; prog = t / 1.4; }
     }
     if (!e.dead && e.sheet === 'succubus') {
-      const S = { tailW: ['sweepW', e.quick ? 0.25 : e.phase2 ? 0.4 : 0.5, true], tail: ['sweep', 0.35], charmW: ['castW', e.phase2 ? 0.7 : 0.85, true], charm: ['cast', 0.5],
+      const S = { whipW: ['sweepW', 0.22, true], whip: ['sweep', 0.3], burstW: ['castW', e.phase2 ? 0.55 : 0.7, true], tailW: ['sweepW', e.quick ? 0.25 : e.phase2 ? 0.4 : 0.5, true], tail: ['sweep', 0.35], charmW: ['castW', e.phase2 ? 0.7 : 0.85, true], charm: ['cast', 0.5],
         orbW: ['castW', 0.6, true], orbs: ['cast', 1.0], flyUp: ['fly', 0.6], dive: ['dive', 0.32], land: ['land', 0.8] }[e.state];
       if (S) { name = S[0]; prog = Math.min(0.99, t / S[1]); ps.tint = S[2] ? (e.state === 'charmW' ? (Math.sin(e.t * 30) > 0 ? 0xffa0e0 : undefined) : red) : ps.tint; }
       else if (e.state === 'hover') { name = 'fly'; prog = null; at = e.t; }
