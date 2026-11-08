@@ -84,6 +84,11 @@
   /* new-player guide box: top centre, never blocks clicks except its own skip button */
   #tut { position: fixed; left: 61%; top: 16%; transform: translateX(-50%); z-index: 5; width: min(560px, 46vw); display: flex; gap: 10px; align-items: center; box-sizing: border-box; padding: 8px 12px 8px 8px; background: rgba(16,12,8,.88); border: 2px solid #c9a45c; border-radius: 12px; color: #f2e6c4; font-family: "Noto Serif TC", serif; pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,.5); }
   #tut[hidden] { display: none; }
+  /* trial: a single line at the top that only says which key to press, with a counter */
+  #tutLine { position: fixed; left: 50%; top: 13%; transform: translateX(-50%); z-index: 5; display: flex; gap: 10px; align-items: center; padding: 5px 8px 5px 14px; background: rgba(16,12,8,.85); border: 1px solid #c9a45c; border-radius: 20px; color: #ffe9a8; font-family: "Noto Serif TC", serif; font-weight: 900; font-size: clamp(13px, 1.8vw, 17px); white-space: nowrap; pointer-events: none; box-shadow: 0 3px 10px rgba(0,0,0,.5); }
+  #tutLine[hidden] { display: none; }
+  #tutLine button { pointer-events: auto; font: inherit; font-size: 11px; font-weight: 600; color: #d8cba8; background: rgba(40,30,20,.9); border: 1px solid #7a6440; border-radius: 12px; padding: 2px 8px; cursor: pointer; }
+  @media (pointer: coarse) { #tut img { display: none; } #tut { padding: 5px 8px; gap: 6px; } #tutText { font-size: 12px; } #tutName { font-size: 11px; } }
   #tut.pop { animation: tutPop .3s ease-out; }
   @keyframes tutPop { 0% { transform: translateX(-50%) scale(.85); } 100% { transform: translateX(-50%) scale(1); } }
   #tut img { width: 56px; height: 56px; object-fit: cover; object-position: top; border-radius: 8px; border: 1px solid #7a6440; flex: none; background: #2a2016; }
@@ -95,6 +100,7 @@
   .say { background: var(--panel2); border-left: 3px solid var(--gold); padding: 10px 12px; border-radius: 4px; margin-bottom: 10px; }
 </style>
 <div id="game"></div>
+<div id="tutLine" hidden><span id="tutLineText"></span><button id="tutLineSkip" type="button">跳過</button></div>
 <div id="tut" hidden><img id="tutImg" src="art/npc_trainer.webp" alt=""><div style="flex:1"><div id="tutName">技能導師（新手教學）</div><div id="tutText"></div></div><button id="tutSkip" type="button">跳過教學</button></div>
 <div id="panel" hidden><div class="pbox" role="dialog" aria-modal="true" aria-labelledby="ptitle"><header><h2 id="ptitle"></h2><button id="pclose" type="button">關閉（Esc）</button></header><div class="pbody" id="pbody"></div></div></div>
 <div id="dlg" hidden><img id="dlgL" alt=""><img id="dlgR" alt=""><div class="dbox"><div id="dlgName"></div><div id="dlgText"></div><div class="dhint">▼</div><button id="dlgSkip" type="button">跳過 ▶▶</button></div></div>
@@ -1753,6 +1759,7 @@ const Tut = {
   place() {
     const cv = document.querySelector('#game canvas'); if (!cv || !this.el) return;
     const r = cv.getBoundingClientRect();
+    if (IS_TOUCH && !this.el.classList.contains('right')) { const w = Math.min(r.width * 0.4, 420); Object.assign(this.el.style, { width: w + 'px', left: (r.left + r.width * 0.6) + 'px', top: (r.top + r.height * 0.15) + 'px' }); return; }
     if (this.el.classList.contains('right')) { const w = Math.min(r.width * 0.32, 420); Object.assign(this.el.style, { width: w + 'px', left: (r.left + r.width - w / 2 - r.width * 0.015) + 'px', top: (r.top + r.height * 0.3) + 'px' }); }
     else { const w = Math.min(r.width * 0.46, 600); Object.assign(this.el.style, { width: w + 'px', left: (r.left + r.width * 0.615) + 'px', top: (r.top + r.height * 0.165) + 'px' }); }
   },
@@ -1764,11 +1771,18 @@ const Tut = {
     const c = this.cur;
     if (this.t > 0.8 && ((c.done && c.done()) || (c.dur && this.t >= c.dur))) this.finish();
   },
-  clear() { this.cur = null; this.q = []; if (this.el) this.el.hidden = true; }, // scene change: pending tips are dropped (they come back next time)
+  clear() { this.cur = null; this.q = []; if (this.el) this.el.hidden = true; tutLine(null); }, // scene change: pending tips are dropped (they come back next time)
   skip() { this.st().skip = true; Save.write(); this.clear(); }
 };
 document.addEventListener('DOMContentLoaded', () => {});
-window.addEventListener('load', () => { const b = document.getElementById('tutSkip'); if (b) b.addEventListener('click', e => { e.stopPropagation(); Tut.skip(); }); });
+function tutLine(text) {
+  const el = document.getElementById('tutLine'); if (!el) return;
+  if (!text) { el.hidden = true; return; }
+  document.getElementById('tutLineText').textContent = text; el.hidden = false;
+  const cv = document.querySelector('#game canvas'); if (cv) { const r = cv.getBoundingClientRect(); el.style.left = (r.left + r.width / 2) + 'px'; el.style.top = (r.top + r.height * 0.12) + 'px'; }
+}
+window.addEventListener('load', () => { const s2 = document.getElementById('tutLineSkip'); if (s2) s2.addEventListener('click', e => { e.stopPropagation(); Tut.skip(); });
+  const b = document.getElementById('tutSkip'); if (b) b.addEventListener('click', e => { e.stopPropagation(); Tut.skip(); }); });
 // town lesson: walk, buy potions, spend points, NPC "!" events, then head out through the gate
 function tutTown(scene) {
   if (Tut.off()) return;
@@ -1932,11 +1946,11 @@ class Town extends Phaser.Scene {
     }
     this.led = null;
     if (!this.textures.exists('town_banner')) return;
-    const BW = 320, src = this.textures.get('town_banner').getSourceImage(), sc = BW / src.width, BH = src.height * sc, bx = 598, by = 4;
-    this.add.image(bx, by, 'town_banner').setOrigin(0.5, 0).setScale(sc).setScrollFactor(0).setDepth(9490)
+    const elder = NPCS.find(n => n.menu === 'elder'), BW = 230, src = this.textures.get('town_banner').getSourceImage(), sc = BW / src.width, BH = src.height * sc, bx = elder.x, by = 66; // hangs in the street above the old bishop
+    this.add.image(bx, by, 'town_banner').setOrigin(0.5, 0).setScale(sc).setDepth(8990)
       .setInteractive({ useHandCursor: true }).on('pointerup', () => { if (!Panel.open && !Dialog.open) openDonate(); });
     const box = { x: bx - BW / 2 + BW * 0.205, y: by + BH * 0.4, w: BW * 0.59, h: BH * 0.3 };
-    const mg = this.make.graphics({ add: false }); mg.fillStyle(0xffffff); mg.fillRect(box.x, box.y, box.w, box.h); mg.setScrollFactor(0);
+    const mg = this.make.graphics({ add: false }); mg.fillStyle(0xffffff); mg.fillRect(box.x, box.y, box.w, box.h);
     this.led = { box, mask: mg.createGeometryMask(), chars: [], x: 0, i: 0, w: 0 };
     this.ledNext();
   }
@@ -1944,14 +1958,14 @@ class Town extends Phaser.Scene {
     const L = this.led; for (const c of L.chars) c.t.destroy(); L.chars = [];
     const msg = LED_MSGS[L.i++ % LED_MSGS.length], fs = Math.round(L.box.h * 0.82); let off = 0;
     for (const ch of msg) {
-      const t = this.add.text(0, L.box.y + L.box.h / 2, ch, TXT(fs, '#ffffff', { fontStyle: '900', stroke: '#000000', strokeThickness: 3 })).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9491).setMask(L.mask);
+      const t = this.add.text(0, L.box.y + L.box.h / 2, ch, TXT(fs, '#ffffff', { fontStyle: '900', stroke: '#000000', strokeThickness: 3 })).setOrigin(0, 0.5).setDepth(8991).setMask(L.mask);
       L.chars.push({ t, off }); off += t.width - 2;
     }
     L.w = off; L.x = L.box.x + L.box.w + 6;
   }
   updateLed(dt, time) {
     const L = this.led; if (!L) return;
-    L.x -= 70 * dt;
+    L.x -= 52 * dt;
     L.chars.forEach((c, k) => { c.t.x = L.x + c.off; c.t.setTint(Phaser.Display.Color.HSVToRGB(((time * 0.00025) + k * 0.07) % 1, 0.85, 1).color); });
     if (L.x + L.w < L.box.x - 6) this.ledNext();
   }
@@ -4211,7 +4225,7 @@ class Game extends Phaser.Scene {
       this.trGuard = this.add.image(W + 90, 430, 'npc_guard').setOrigin(0.5, 1).setScale(0.5).setDepth(440);
       this.tweens.add({ targets: this.trGuard, x: W - 70, duration: 900, ease: 'Quad.out', onComplete: () => {
         const L = TRIAL.guard[this.clsKey];
-        this.say([G1('angry', L[0]), H('n', L[1]), G1('n', '哼，嘴巴倒是很厲害。旁邊有幾隻訓練用的魚人，我一招一招教你，給我照做！')], () => { T.step = 'practice'; this.trialDrill(); });
+        this.say([G1('angry', L[0]), H('n', L[1]), G1('n', '哼，嘴巴倒是很厲害。旁邊有幾隻訓練用的魚人，我一招一招教你，給我照做！'), G1('n', TRIAL.drill[this.clsKey][0])], () => { T.step = 'practice'; this.trialDrill(); });
       } });
     } else if (T.step === 'practice') {
       // training ground: free mana, short cooldowns, harmless fishmen that keep coming back
@@ -4219,25 +4233,39 @@ class Game extends Phaser.Scene {
       if (!this.enemies.some(e => !e.dead)) for (let k = 0; k < 3; k++) {
         const e = this.spawnEnemy('fish', 300 + k * 110, 380 + k * 40, false); Object.assign(e, { atk: 1, entered: true, noShriek: true, fadeIn: 0.5 });
       }
-      const st = Tut.st();
-      if (Tut.off() || ['trial_atk', 'trial_jump', 'trial_def', 'trial_q', 'trial_w', 'trial_e', 'trial_r'].every(k => st[k])) {
-        T.step = 'leave'; for (const e of this.enemies) if (!e.dead) { e.dead = true; e.remove = true; }
-        Tut.say('trial_go', TRIAL.drill[this.clsKey][7] + ' 往右走出訓練場，進城去吧。別擋著我站崗。', { who: 'guard', side: 'right', done: () => T.step !== 'leave' });
+      if (Tut.off()) this.trIdx = this.trSteps.length; // 跳過: straight to the end of the drill
+      const S = this.trSteps[this.trIdx];
+      if (S) {
+        const prog = Math.min(Tut.marks[S.k] || 0, S.n);
+        tutLine(`${S.txt}（${prog} / ${S.n}）`);
+        if (prog >= S.n) {
+          this.trIdx++; const N = this.trSteps[this.trIdx]; tutLine(null); SFX.pickup();
+          if (N) { T.step = 'wait'; this.say([G1(N.e, N.jab)], () => { Tut.marks[N.k] = 0; T.step = 'practice'; }); }
+        }
+      }
+      if (T.step === 'practice' && !this.trSteps[this.trIdx]) {
+        T.step = 'wait'; tutLine(null); for (const e of this.enemies) if (!e.dead) { e.dead = true; e.remove = true; }
+        this.say([G1('sigh', TRIAL.drill[this.clsKey][7] + ' 往右走出訓練場，進城去吧。別擋著我站崗。')], () => { T.step = 'leave'; });
       }
     } else if (T.step === 'leave') {
-      if (p.x > W - 80 && p.state !== 'dead') { T.step = 'wait'; this.trialAmbush(); }
+      tutLine('往右走，離開訓練場 →');
+      if (p.x > W - 80 && p.state !== 'dead') { T.step = 'wait'; tutLine(null); this.trialAmbush(); }
     }
   }
   // the guard's drill: one control per tip, each with a class-specific jab; the next tip appears once it's done
+  // the drill: a one-line hint says which key to press (with a counter); each finished step is followed by the guard's jab
   trialDrill() {
-    const D = TRIAL.drill[this.clsKey], sk = this.cls.skills, m = k => Tut.marks[k] || 0, o = (k, n) => ({ who: 'guard', side: 'right', done: () => m(k) >= n, reset: [k] });
-    Tut.say('trial_atk', `${D[0]} 按${KEYN.A}攻擊魚人，打三下。`, o('atkPress', 3));
-    Tut.say('trial_jump', `${D[1]} 按${KEYN.jump}跳兩下。`, o('jump', 2));
-    Tut.say('trial_def', `${D[2]} 按${KEYN.S}用「${this.cls.defName}」，試兩次。`, o('def', 2));
-    Tut.say('trial_q', `${D[3]} 按 ${skillKey(0)} 放「${sk[0].name}」，連放三次。（訓練場不扣魔力，冷卻也很短）`, o('skill0', 3));
-    Tut.say('trial_w', `${D[4]} 按 ${skillKey(1)} 放「${sk[1].name}」。`, o('skill1', 1));
-    Tut.say('trial_e', `${D[5]} 按 ${skillKey(2)} 放「${sk[2].name}」。`, o('skill2', 1));
-    Tut.say('trial_r', `${D[6]} 按 ${skillKey(3)} 放「${sk[3].name}」。`, o('skill3', 1));
+    const D = TRIAL.drill[this.clsKey], sk = this.cls.skills;
+    this.trSteps = [
+      { k: 'atkPress', n: 3, txt: `按 ${KEYN.A}：普通攻擊` },
+      { k: 'jump', n: 2, txt: `按 ${KEYN.jump}：跳躍`, jab: D[1], e: 'n' },
+      { k: 'def', n: 2, txt: `按 ${KEYN.S}：${this.cls.defName}`, jab: D[2], e: 'sigh' },
+      { k: 'skill0', n: 3, txt: `按 ${skillKey(0)}：${sk[0].name}`, jab: D[3], e: 'angry' },
+      { k: 'skill1', n: 1, txt: `按 ${skillKey(1)}：${sk[1].name}`, jab: D[4], e: 'n' },
+      { k: 'skill2', n: 1, txt: `按 ${skillKey(2)}：${sk[2].name}`, jab: D[5], e: 'shock' },
+      { k: 'skill3', n: 1, txt: `按 ${skillKey(3)}：${sk[3].name}（大絕招）`, jab: D[6], e: 'n' }
+    ];
+    this.trIdx = 0; Tut.marks.atkPress = 0;
   }
   trialAmbush() {
     const p = this.player, who = { E: 'elder', H: this.clsKey, G: 'npc_guard' };
