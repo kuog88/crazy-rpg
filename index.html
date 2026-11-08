@@ -1844,7 +1844,7 @@ function tutStageCheck(gm) {
   if (!st.stg_potion && p.state !== 'dead' && p.hp < p.maxHp * 0.6) Tut.say('stg_potion', `血少了！按${KEYN.red}補血、${KEYN.blue}補魔`, { done: () => Tut.marks.drink, reset: ['drink'], urgent: true });
   if (!st.stg_combo && gm.combo >= 10) Tut.say('stg_combo', '連擊越高傷害越高，被打到就歸零', { dur: 7 });
   if (!st.stg_elite && gm.enemies.some(e => e.elite && !e.dead && e.affixes && e.affixes.length && !e.sentry)) Tut.say('stg_elite', '「菁英・XX」是詞綴：打法不同，掉寶較好', { dur: 8 });
-  if (!st.stg_deck && gm.enemies.some(e => e.sentry && !e.dead)) Tut.say('stg_deck', `高台的怪會丟技能：先跳上階梯，再跳上去打`, { done: () => !gm.enemies.some(e => e.sentry && !e.dead), urgent: true });
+  if (!st.stg_deck && gm.enemies.some(e => e.sentry && !e.dead)) Tut.say('stg_deck', `高台的怪會丟技能：先跳上矮平台，再跳上高台`, { done: () => !gm.enemies.some(e => e.sentry && !e.dead), urgent: true });
   if (!st.stg_bomb && gm.bombs && gm.bombs.length) Tut.say('stg_bomb', '自爆怪死後 3 秒爆炸，快閃開！', { dur: 6, urgent: true });
   if (!st.stg_boss && gm.boss && !gm.boss.dead) Tut.say('stg_boss', '魔王出場！看到紅色警告區就閃開', { dur: 8, urgent: true });
 }
@@ -3286,15 +3286,7 @@ class Game extends Phaser.Scene {
         default:
           if (p.state === 'dead') { e.vx *= 0.9; e.vy *= 0.9; break; }
           if (e.sentry) this.aiSentry(e, dt);
-          else if (e.kind === 'wolf' || e.kind === 'hellhound') this.aiWolf(e, dt);
-          else if (['fish', 'skel', 'hydra', 'mud', 'gargoyle', 'imp'].includes(e.kind)) this.aiFish(e, dt);
-          else if (e.kind === 'eyedemon') this.aiEye(e, dt);
-          else if (e.kind === 'brute') this.aiBrute(e, dt);
-          else if (e.sheet === 'succubus') this.aiSuccubus(e, dt);
-          else if (e.kind === 'skelmage') this.aiCaster(e, dt);
-          else if (e.kind === 'venomslime') this.aiSlime(e, dt);
-          else if (e.kind === 'deathknight') this.aiKnight(e, dt);
-          else this.aiBoss(e, dt);
+          else this.aiKind(e, dt);
       }
       if (e.affixes) this.tickAffixes(e, dt);
       e.x += e.vx * dt; e.y = clamp(e.y + e.vy * dt, GROUND_TOP + 10, GROUND_BOT);
@@ -3307,6 +3299,17 @@ class Game extends Phaser.Scene {
     }
     for (const e of this.enemies) if (e.remove) { e.g.destroy(); if (e.spr) e.spr.destroy(); if (e.aspr) e.aspr.destroy(); if (e.label) e.label.destroy(); }
     this.enemies = this.enemies.filter(e => !e.remove);
+  }
+  aiKind(e, dt) {
+    if (e.kind === 'wolf' || e.kind === 'hellhound') this.aiWolf(e, dt);
+    else if (['fish', 'skel', 'hydra', 'mud', 'gargoyle', 'imp'].includes(e.kind)) this.aiFish(e, dt);
+    else if (e.kind === 'eyedemon') this.aiEye(e, dt);
+    else if (e.kind === 'brute') this.aiBrute(e, dt);
+    else if (e.sheet === 'succubus') this.aiSuccubus(e, dt);
+    else if (e.kind === 'skelmage') this.aiCaster(e, dt);
+    else if (e.kind === 'venomslime') this.aiSlime(e, dt);
+    else if (e.kind === 'deathknight') this.aiKnight(e, dt);
+    else this.aiBoss(e, dt);
   }
   moveToward(e, tx, ty, sp) {
     const L = this.cam.scrollX; tx = clamp(tx, L + 50, L + W - 50);
@@ -3325,7 +3328,7 @@ class Game extends Phaser.Scene {
       }
       case 'wind': e.vx = e.vy = 0; if (e.st > 0.45) { this.setState(e, 'pounce'); e.vz = 360; e.vx = e.face * 500; e.hitDone = false; } break;
       case 'pounce':
-        if (!e.hitDone && Math.abs(p.x - e.x) < e.hw + 18 && Math.abs(p.y - e.y) < 24 && Math.abs(p.z - e.z) < 60) { e.hitDone = true; this.hurtPlayer(e.atk, e.x, { kb: 220, src: e }); }
+        if (!e.hitDone && Math.abs(p.x - e.x) < e.hw + 18 && Math.abs(p.y - e.y) < 24 && Math.abs((p.z - p.fl) - (e.z - e.fl)) < 60 && Math.abs(p.fl - e.fl) < 20) { e.hitDone = true; this.hurtPlayer(e.atk, e.x, { kb: 220, src: e }); }
         if (e.kind === 'hellhound' && Math.random() < 0.5) this.sparks(e.x - e.face * 20, e.y - e.z - 40, 0xff8a3a, 1);
         if (e.z <= e.fl && e.st > 0.1) {
           this.setState(e, 'recover'); e.vx *= 0.3; this.release(e);
@@ -3352,12 +3355,12 @@ class Game extends Phaser.Scene {
       case 'lungeW': e.vx = e.vy = 0; if (e.st > 0.5) { this.setState(e, 'lunge'); e.hitDone = false; } break;
       case 'lunge':
         e.vx = e.st < 0.28 ? e.face * 560 : e.vx * Math.pow(0.01, dt);
-        if (!e.hitDone && (p.x - e.x) * e.face > -10 && Math.abs(p.x - e.x) < 70 && ady < 24 && p.z < 60) { e.hitDone = true; this.hurtPlayer(e.atk * 1.2, e.x, { kb: 240, src: e }); }
+        if (!e.hitDone && (p.x - e.x) * e.face > -10 && Math.abs(p.x - e.x) < 70 && ady < 24 && (p.z - p.fl < 60 && Math.abs(p.fl - e.fl) < 20)) { e.hitDone = true; this.hurtPlayer(e.atk * 1.2, e.x, { kb: 240, src: e }); }
         if (e.st > 0.5) { this.setState(e, 'chase'); e.throwCd = rand(3, 5); e.cd = rand(0.8, 1.5); this.release(e); }
         break;
       case 'pokeW': e.vx = e.vy = 0; if (e.st > 0.42) {
         this.setState(e, 'poke'); e.vx = e.face * 160;
-        if ((p.x - e.x) * e.face > -10 && adx < 110 && ady < 24 && p.z < 60) this.hurtPlayer(e.atk, e.x, { kb: 180, src: e });
+        if ((p.x - e.x) * e.face > -10 && adx < 110 && ady < 24 && (p.z - p.fl < 60 && Math.abs(p.fl - e.fl) < 20)) this.hurtPlayer(e.atk, e.x, { kb: 180, src: e });
       } break;
       case 'poke': e.vx *= Math.pow(0.01, dt); if (e.st > 0.35) { this.setState(e, 'chase'); e.cd = rand(1.2, 2.2); this.release(e); } break;
       case 'throwW': e.vx = e.vy = 0; if (e.st > 0.55) {
@@ -3429,7 +3432,7 @@ class Game extends Phaser.Scene {
       case 'charge': {
         e.vx = e.face * (e.phase2 ? 1250 : 1050); e.vy = 0;
         if (Math.random() < 0.6) this.dust(e.x - e.face * 50, e.y);
-        if (!e.hitDone && Math.abs(p.x - e.x) < e.hw + 34 && ady < 44 && p.z < 90) { e.hitDone = true; this.hurtPlayer(e.atk * 1.3, e.x, { kb: 560, launch: 420, src: e }); this.cam.shake(260, 0.016); }
+        if (!e.hitDone && Math.abs(p.x - e.x) < e.hw + 34 && ady < 44 && (p.z - p.fl < 90 && Math.abs(p.fl - e.fl) < 20)) { e.hitDone = true; this.hurtPlayer(e.atk * 1.3, e.x, { kb: 560, launch: 420, src: e }); this.cam.shake(260, 0.016); }
         const L = this.cam.scrollX;
         if (e.st > 1.2 || (e.face > 0 && e.x > L + W - e.hw - 10) || (e.face < 0 && e.x < L + e.hw + 10)) {
           e.vx = 0; this.cam.shake(320, 0.02); SFX.boom(); this.dust(e.x + e.face * 60, e.y); this.crack(e.x + e.face * 60, e.y);
@@ -3446,7 +3449,7 @@ class Game extends Phaser.Scene {
         e.spinTick -= dt;
         if (e.spinTick <= 0) {
           e.spinTick = 0.3; SFX.swing(); this.ring(e.x, e.y, 170, 0xffb07a, 0.25, false); this.dust(e.x + rand(-80, 80), e.y);
-          if (d < 175 && p.z < 90) this.hurtPlayer(e.atk * 0.55, e.x, { kb: 280, src: e });
+          if (d < 175 && (p.z - p.fl < 90 && Math.abs(p.fl - e.fl) < 20)) this.hurtPlayer(e.atk * 0.55, e.x, { kb: 280, src: e });
         }
         if (e.st > dur) { this.setState(e, 'recover'); e.recoverDur = 1.0; }
         break;
@@ -3565,7 +3568,7 @@ class Game extends Phaser.Scene {
         if (e.st > (e.phase2 ? 0.55 : 0.8)) { this.setState(e, 'charge'); e.hitDone = false; SFX.roar(); } break;
       case 'charge': {
         e.vx = e.face * (e.phase2 ? 1300 : 1100); e.vy = 0; if (Math.random() < 0.6) this.dust(e.x - e.face * 50, e.y);
-        if (!e.hitDone && Math.abs(p.x - e.x) < e.hw + 30 && ady < 44 && p.z < 90) { e.hitDone = true; this.hurtPlayer(e.atk * 1.25, e.x, { kb: 540, launch: 400, src: e }); this.cam.shake(240, 0.014); }
+        if (!e.hitDone && Math.abs(p.x - e.x) < e.hw + 30 && ady < 44 && (p.z - p.fl < 90 && Math.abs(p.fl - e.fl) < 20)) { e.hitDone = true; this.hurtPlayer(e.atk * 1.25, e.x, { kb: 540, launch: 400, src: e }); this.cam.shake(240, 0.014); }
         const L = this.cam.scrollX;
         if (e.st > 1.1 || (e.face > 0 && e.x > L + W - e.hw - 10) || (e.face < 0 && e.x < L + e.hw + 10)) { e.vx = 0; this.cam.shake(260, 0.016); SFX.boom(); this.setState(e, 'recover'); e.recoverDur = 0.9; }
         break;
@@ -3576,7 +3579,7 @@ class Game extends Phaser.Scene {
         if (e.stompT <= 0 && e.stomps < 3) {
           e.stomps++; e.stompT = 0.5; SFX.boom(); this.cam.shake(180, 0.012); this.crack(e.x + e.face * 40, e.y);
           const R = 150 + e.stomps * 30; this.ring(e.x, e.y, R, 0x9fd8ff, 0.4, true); this.dust(e.x + e.face * 50, e.y);
-          if (Math.hypot(dx, dy * 1.8) < R && p.z < 60) this.hurtPlayer(e.atk * 0.75, e.x, { kb: 300, launch: 260, src: e });
+          if (Math.hypot(dx, dy * 1.8) < R && (p.z - p.fl < 60 && Math.abs(p.fl - e.fl) < 20)) this.hurtPlayer(e.atk * 0.75, e.x, { kb: 300, launch: 260, src: e });
         }
         if (e.stomps >= 3 && e.stompT <= 0) { this.setState(e, 'recover'); e.recoverDur = 1.0; }
         break;
@@ -3652,7 +3655,7 @@ class Game extends Phaser.Scene {
         if (e.st > 0.5 && !e.roared) {
           e.roared = true; SFX.roar(); this.cam.shake(400, 0.012); this.ring(e.x, e.y, 220, 0xff5a2a, 0.5, true);
           this.floatText(e.x, e.y - e.ht - 30, '蠻魔暴怒了！', '#ff8a5a'); e.atk *= 1.2;
-          if (Math.hypot(dx, dy * 1.8) < 200 && p.z < 60) this.hurtPlayer(e.atk * 0.5, e.x, { kb: 420, src: e });
+          if (Math.hypot(dx, dy * 1.8) < 200 && (p.z - p.fl < 60 && Math.abs(p.fl - e.fl) < 20)) this.hurtPlayer(e.atk * 0.5, e.x, { kb: 420, src: e });
           for (let i = 0; i < 2; i++) { const m = this.spawnAtEdge('imp', false, i ? 1 : -1); m.summoned = true; }
         }
         if (e.st > 1.4) { this.setState(e, 'chase'); e.cd = 0.6; } break;
@@ -3661,7 +3664,7 @@ class Game extends Phaser.Scene {
         if (!e.smashed && e.st > 0.08) {
           e.smashed = true; SFX.boom(); this.cam.shake(320, 0.02);
           const cx = e.x + e.face * 90; this.crack(cx, e.y); this.dust(cx, e.y); this.ring(cx, e.y, 190, 0xff6a2a, 0.45, true);
-          if (Math.hypot(p.x - cx, (p.y - e.y) * 1.8) < 190 && p.z < 70) this.hurtPlayer(e.atk * 1.2, e.x, { kb: 360, launch: 380, src: e });
+          if (Math.hypot(p.x - cx, (p.y - e.y) * 1.8) < 190 && (p.z - p.fl < 70 && Math.abs(p.fl - e.fl) < 20)) this.hurtPlayer(e.atk * 1.2, e.x, { kb: 360, launch: 380, src: e });
           const n = e.phase2 ? 6 : 4; // the ground splits and hellfire bursts out around the impact
           for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 + 0.4; this.addFire(cx + Math.cos(a) * 175, e.y + Math.sin(a) * 65, { warn: 0.5, life: 1.6, dmg: e.atk * 0.25, r: 56 }); }
         }
@@ -3670,7 +3673,7 @@ class Game extends Phaser.Scene {
         if (e.st > (e.phase2 ? 0.55 : 0.8)) { this.setState(e, 'charge'); e.hitDone = false; SFX.roar(); } break;
       case 'charge': {
         e.vx = e.face * (e.phase2 ? 1150 : 950); e.vy = 0; if (Math.random() < 0.6) this.dust(e.x - e.face * 50, e.y);
-        if (!e.hitDone && Math.abs(p.x - e.x) < e.hw + 30 && ady < 44 && p.z < 90) { e.hitDone = true; this.hurtPlayer(e.atk * 1.3, e.x, { kb: 560, launch: 420, src: e }); this.cam.shake(260, 0.016); }
+        if (!e.hitDone && Math.abs(p.x - e.x) < e.hw + 30 && ady < 44 && (p.z - p.fl < 90 && Math.abs(p.fl - e.fl) < 20)) { e.hitDone = true; this.hurtPlayer(e.atk * 1.3, e.x, { kb: 560, launch: 420, src: e }); this.cam.shake(260, 0.016); }
         const L = this.cam.scrollX;
         if (e.st > 1.1 || (e.face > 0 && e.x > L + W - e.hw - 10) || (e.face < 0 && e.x < L + e.hw + 10)) { e.vx = 0; this.cam.shake(300, 0.018); SFX.boom(); this.crack(e.x + e.face * 60, e.y); this.setState(e, 'recover'); e.recoverDur = 1.0; }
         break;
@@ -3738,7 +3741,7 @@ class Game extends Phaser.Scene {
         if (!e.swept && e.st > 0.06) {
           e.swept = true; this.cam.shake(120, 0.008);
           this.fxSprite('fx_hit', e.x + e.face * 120, e.y - 50, { sx: 0.55, sy: 0.4, tint: 0xff6ad8, dur: 0.2 });
-          if ((p.x - e.x) * e.face > -20 && adx < 175 && ady < 50 && p.z < 70) this.hurtPlayer(e.atk, e.x, { kb: 320, launch: 240, src: e });
+          if ((p.x - e.x) * e.face > -20 && adx < 175 && ady < 50 && (p.z - p.fl < 70 && Math.abs(p.fl - e.fl) < 20)) this.hurtPlayer(e.atk, e.x, { kb: 320, launch: 240, src: e });
         }
         if (e.st > 0.35) { this.setState(e, 'recover'); e.recoverDur = 0.5; } break;
       case 'charmW':
@@ -3764,7 +3767,7 @@ class Game extends Phaser.Scene {
         if (k >= 1) {
           e.flying = false; e.z = 0; e.vz = 0; SFX.boom(); this.cam.shake(400, 0.022); this.crack(e.x, e.y); this.dust(e.x, e.y);
           this.ring(e.x, e.y, 210, 0xff5ad0, 0.5, true); this.ring(e.x, e.y, 140, 0xffffff, 0.3, false);
-          if (Math.hypot(p.x - e.x, (p.y - e.y) * 1.8) < 210 && p.z < 80) this.hurtPlayer(e.atk * 1.4, e.x, { kb: 420, launch: 460, src: e });
+          if (Math.hypot(p.x - e.x, (p.y - e.y) * 1.8) < 210 && (p.z - p.fl < 80 && Math.abs(p.fl - e.fl) < 20)) this.hurtPlayer(e.atk * 1.4, e.x, { kb: 420, launch: 460, src: e });
           if (e.phase2) for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; this.addFire(e.x + Math.cos(a) * 240, e.y + Math.sin(a) * 85, { warn: 0.3, life: 1.6, dmg: e.atk * 0.22, r: 54 }); }
           this.setState(e, 'land');
         }
@@ -3802,7 +3805,7 @@ class Game extends Phaser.Scene {
     const pt = this.portal; if (!pt) return;
     pt.t += dt;
     if (!pt.exit) { pt.ttl -= dt; if (pt.ttl <= 0) { this.portal = null; this.floatText(this.player.x, this.player.y - 110, '傳送門消失了……', '#b8a8d8'); return; } }
-    const p = this.player, inside = Math.abs(p.x - pt.x) < 50 && Math.abs(p.y - pt.y) < 36 && p.z < 30 && p.state !== 'dead';
+    const p = this.player, inside = Math.abs(p.x - pt.x) < 50 && Math.abs(p.y - pt.y) < 36 && (p.z - p.fl < 30 && Math.abs(p.fl - e.fl) < 20) && p.state !== 'dead';
     const blocked = !pt.exit && this.waveActive; // finish the current wave first (entering must not skip it)
     if (inside && blocked && !pt.warned) { pt.warned = true; this.floatText(p.x, p.y - 110, '先清完這一波才能進入', '#e8d8ff'); }
     if (!inside) pt.warned = false;
@@ -4064,18 +4067,25 @@ class Game extends Phaser.Scene {
     this.deckG = this.add.graphics().setDepth(DECK_Y1 + 5); this.deckFx = this.add.graphics().setDepth(DECK_Y1 + 5.5);
     for (const i of DECK_WAVES) {
       if (i >= WAVES.length - 1) continue;
-      const cx = waveX(i) + 360; if (cx + 260 > BOSS_FREE) continue;
-      const deck = { kind: 'deck', wave: i, x0: cx - 220, x1: cx + 220, y0: GROUND_TOP, y1: DECK_Y1, h: DECK_H, vd: { 1: 46, 2: 40, 3: 78 }[this.stageId] || 50 };
-      const box = { kind: 'box', x0: deck.x0 - 92, x1: deck.x0 - 4, y0: GROUND_TOP + 26, y1: DECK_Y1, h: BOX_H, vd: 30 };
-      deck.box = box; this.decks.push(deck, box);
-      this.obstacles = this.obstacles.filter(ob => ob.x + ob.w < box.x0 - 60 || ob.x - ob.w > deck.x1 + 60);
+      const SL = waveX(i) - 360; if (SL + 960 > BOSS_FREE) continue; // SL: left edge of the screen this wave locks to
+      const vd = { 1: 46, 2: 40, 3: 78 }[this.stageId] || 50;
+      const big = (x0, x1) => ({ kind: 'deck', wave: i, x0: SL + x0, x1: SL + x1, y0: GROUND_TOP, y1: DECK_Y1, h: DECK_H, vd });
+      const low = (x0, x1) => ({ kind: 'box', x0: SL + x0, x1: SL + x1, y0: GROUND_TOP + 26, y1: DECK_Y1, h: BOX_H, vd: 30 });
+      const lay = ['right', 'left', 'both'][randi(0, 2)];
+      let parts;
+      if (lay === 'right') { const d = big(500, 940), b = low(366, 496); d.box = b; parts = [d, b]; }
+      else if (lay === 'left') { const d = big(20, 460), b = low(464, 594); d.box = b; parts = [d, b]; }
+      else { const a = big(20, 330), c = big(610, 940), b = low(370, 570); a.box = b; c.box = b; parts = [a, c, b]; }
+      this.decks.push(...parts);
+      const lo = Math.min(...parts.map(p => p.x0)), hi = Math.max(...parts.map(p => p.x1));
+      this.obstacles = this.obstacles.filter(ob => ob.x + ob.w < lo - 60 || ob.x - ob.w > hi + 60);
     }
     for (const d of this.decks) this.drawDeck(this.deckG, d);
   }
   drawDeck(g, d) {
     const w = d.x1 - d.x0, top = d.y1 - d.h, dep = d.vd;
     g.fillStyle(0x000000, 0.35); g.fillRect(d.x0 - 8, d.y1 - 4, w + 16, 14);
-    const art = (d.kind === 'box' ? 'step_' : 'deck_') + this.stageId;
+    const art = 'deck_' + this.stageId;
     if (this.textures.exists(art)) { // painted stage-styled block, stretched over the collision box
       if (!d.img) d.img = this.add.image(d.x0 - 4, top - dep - 4, art).setOrigin(0, 0).setDisplaySize(w + 8, d.h + dep + 8).setDepth(DECK_Y1 + 5.2);
       return;
@@ -4138,11 +4148,13 @@ class Game extends Phaser.Scene {
     if (e.z < d.h) { e.z = d.h; if (e.vz < 0) e.vz = 0; }
   }
   depthOf(o) { return o.deck ? o.deck.y1 + 6 + (o.y - o.deck.y0) * 0.02 : o.y + 10; }
-  spawnSentries(d) {
-    const type = { 1: 'fish', 2: 'skelmage', 3: 'eyedemon' }[this.stageId] || 'skelmage', n = d.wave >= 8 ? 3 : 2;
+  spawnSentries(d, decks) {
+    const ranged = { 1: 'fish', 2: 'skelmage', 3: 'eyedemon' }[this.stageId] || 'skelmage', melee = { 1: ['hydra', 'fish'], 2: ['skel', 'wolf'], 3: ['imp', 'hellhound'] }[this.stageId] || ['skel'];
+    const n = decks > 1 ? 2 : d.wave >= 8 ? 3 : 2;
     for (let k = 0; k < n; k++) {
-      const e = this.spawnEnemy(type, lerp(d.x0 + 70, d.x1 - 70, k / (n - 1)), rand(d.y1 - d.vd + 8, d.y1 - 6), d.wave >= 5 && k === n - 1);
-      e.sentry = true; e.deck = d; e.fl = e.z = d.h; e.entered = true; e.fadeIn = 0.6; e.cd = rand(1.2, 2.2) + k * 0.7; e.noShriek = true; if (e.elite) this.rollAffixes(e, true);
+      const guard = k > 0 && Math.random() < 0.5, type = guard ? melee[randi(0, melee.length - 1)] : ranged; // at least one lobber, the rest a random mix
+      const e = this.spawnEnemy(type, lerp(d.x0 + 50, d.x1 - 50, k / (n - 1)), rand(d.y1 - d.vd + 8, d.y1 - 6), d.wave >= 5 && k === n - 1);
+      e.sentry = true; e.guard = guard; e.deck = d; e.fl = e.z = d.h; e.entered = true; e.fadeIn = 0.6; e.cd = rand(1.2, 2.2) + k * 0.7; e.noShriek = true; if (e.elite) this.rollAffixes(e, true);
       this.sparks(e.x, e.y - e.z - 40, 0xffffff, 6);
     }
     if (!this.deckHint && Tut.off()) { this.deckHint = true; this.after(0.8, () => this.floatText(this.player.x, this.player.y - 130, '高台上的怪在往下丟技能！跳上箱子，再跳上高台打牠', '#ffe9a8')); }
@@ -4150,6 +4162,7 @@ class Game extends Phaser.Scene {
   /* Sentry: paces its deck (backs away when the hero climbs up next to it) and lobs an arcing shot at where the hero is heading. */
   aiSentry(e, dt) {
     const p = this.player, d = e.deck, dx = p.x - e.x;
+    if (e.guard && ((p.deck === d && p.state !== 'dead') || e.state !== 'chase')) return this.aiKind(e, dt);
     switch (e.state) {
       case 'chase': {
         e.face = Math.sign(dx) || e.face; e.cd -= dt;
@@ -4157,7 +4170,7 @@ class Game extends Phaser.Scene {
         if (near) e.patrolX = clamp(e.x - Math.sign(dx) * 140, d.x0 + 30, d.x1 - 30);
         else if (e.patrolX === undefined || Math.abs(e.patrolX - e.x) < 10) e.patrolX = rand(d.x0 + 40, d.x1 - 40);
         e.vx = Math.abs(e.patrolX - e.x) > 10 ? Math.sign(e.patrolX - e.x) * e.speed * (near ? 0.9 : 0.45) : 0; e.vy = 0;
-        if (e.cd <= 0 && p.state !== 'dead') { this.setState(e, 'sentryW'); e.vx = e.vy = 0; }
+        if (!e.guard && e.cd <= 0 && p.state !== 'dead') { this.setState(e, 'sentryW'); e.vx = e.vy = 0; }
         break;
       }
       case 'sentryW': e.vx = e.vy = 0; e.face = Math.sign(dx) || e.face; if (e.st > 0.6) { this.lob(e); this.setState(e, 'sentry'); } break;
@@ -4617,7 +4630,8 @@ class Game extends Phaser.Scene {
         this.reserve = isBoss ? 0 : Math.floor(this.spawnQueue.length * rand(0.2, 0.4));
         this.spawnT = rand(0.2, 0.6);
         G.msgQ.push({ type: 'wave', idx: this.waveIdx });
-        const dk = this.decks.find(d => d.wave === this.waveIdx); if (dk) { this.lockX = clamp(Math.max(this.lockX, dk.x1 + 30 - W), 0, STAGE_LEN - W); this.spawnSentries(dk); }
+        const dks = this.decks.filter(d => d.wave === this.waveIdx);
+        if (dks.length) { const pp = dks.flatMap(d => [d, d.box].filter(Boolean)), lo = Math.min(...pp.map(o => o.x0)), hi = Math.max(...pp.map(o => o.x1)); this.lockX = clamp(clamp(this.lockX, hi + 30 - W, lo - 30), 0, STAGE_LEN - W); dks.forEach(d => this.spawnSentries(d, dks.length)); }
       }
       return;
     }
