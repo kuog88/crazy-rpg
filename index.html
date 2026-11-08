@@ -89,25 +89,31 @@
   /* story dialogue: portrait on the speaker's side, typewriter text box along the bottom */
   #dlg { position: fixed; inset: 0; z-index: 6; pointer-events: auto; font-family: "Noto Serif TC", serif; }
   #dlg[hidden] { display: none; }
-  #dlg img { position: absolute; bottom: 0; height: min(62vh, 520px); max-width: 46vw; object-fit: contain; object-position: bottom; filter: drop-shadow(0 6px 10px #000); transition: filter .15s, opacity .15s, transform .15s; }
-  #dlgL { left: 2vw; } #dlgR { right: 2vw; transform: scaleX(-1); }
+  #dlg img { position: absolute; z-index: 2; bottom: 0; height: min(66vh, 520px); max-width: 30vw; object-fit: contain; object-position: bottom; filter: drop-shadow(0 6px 10px #000); transition: filter .15s, opacity .15s, transform .15s; }
+  #dlgL { left: 1vw; } #dlgR { right: 1vw; transform: scaleX(-1); }
   #dlg img.dim { filter: brightness(.45) drop-shadow(0 6px 10px #000); }
   #dlg img.talk { animation: dlgBob .35s ease-out; }
   #dlgR.talk { animation: dlgBobR .35s ease-out; }
   @keyframes dlgBob { 30% { transform: translateY(-8px); } }
   @keyframes dlgBobR { 30% { transform: scaleX(-1) translateY(-8px); } }
-  #dlg .dbox { position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(760px, 92vw); min-height: 112px; box-sizing: border-box; padding: 14px 18px 18px; background: rgba(16,12,8,.92); border: 2px solid var(--gold, #c9a45c); border-radius: 12px; color: #f2e6c4; box-shadow: 0 8px 30px rgba(0,0,0,.6); }
+  #dlg .dbox { position: absolute; z-index: 1; left: 50%; bottom: max(14px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(720px, 54vw); min-height: 112px; box-sizing: border-box; padding: 14px 18px 18px; background: rgba(16,12,8,.92); border: 2px solid var(--gold, #c9a45c); border-radius: 12px; color: #f2e6c4; box-shadow: 0 8px 30px rgba(0,0,0,.6); }
   #dlgName { display: inline-block; margin: -30px 0 6px -4px; padding: 3px 14px; background: #3a2e1d; border: 2px solid var(--gold, #c9a45c); border-radius: 8px; font-weight: 900; color: #ffe9a8; }
   #dlgText { font-size: clamp(15px, 2.2vw, 19px); line-height: 1.6; min-height: 3.2em; white-space: pre-wrap; }
   #dlg .dhint { position: absolute; right: 16px; bottom: 8px; color: #e9c46a; animation: dlgHint 1s infinite; }
   @keyframes dlgHint { 50% { opacity: .2; } }
-  #dlgSkip { position: absolute; right: 10px; top: -34px; font: inherit; font-size: 12px; color: #f2e6c4; background: rgba(40,30,20,.85); border: 1px solid #c9a45c; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  #dlgSkip { position: absolute; z-index: 3; right: 10px; top: -34px; font: inherit; font-size: 12px; color: #f2e6c4; background: rgba(40,30,20,.85); border: 1px solid #c9a45c; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
   /* new-player guide box: top centre, never blocks clicks except its own skip button */
   #tut { position: fixed; left: 61%; top: 16%; transform: translateX(-50%); z-index: 5; width: min(560px, 46vw); display: flex; gap: 10px; align-items: center; box-sizing: border-box; padding: 8px 12px 8px 8px; background: rgba(16,12,8,.88); border: 2px solid #c9a45c; border-radius: 12px; color: #f2e6c4; font-family: "Noto Serif TC", serif; pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,.5); }
   #tut[hidden] { display: none; }
   /* trial: a single line at the top that only says which key to press, with a counter */
   #tutLine { position: fixed; left: 50%; top: 13%; transform: translateX(-50%); z-index: 5; display: flex; gap: 10px; align-items: center; padding: 5px 8px 5px 14px; background: rgba(16,12,8,.85); border: 1px solid #c9a45c; border-radius: 20px; color: #ffe9a8; font-family: "Noto Serif TC", serif; font-weight: 900; font-size: clamp(13px, 1.8vw, 17px); white-space: nowrap; pointer-events: none; box-shadow: 0 3px 10px rgba(0,0,0,.5); }
   #tutLine[hidden] { display: none; }
+  #tutTip { position: fixed; left: 50%; top: 12%; transform: translate(-50%, 0); z-index: 5; display: flex; gap: 8px; align-items: center; max-width: 92vw; padding: 4px 6px 4px 6px; background: rgba(16,12,8,.86); border: 1px solid #c9a45c; border-radius: 18px; color: #f2e6c4; font-family: "Noto Serif TC", serif; font-size: clamp(12px, 1.6vw, 15px); font-weight: 900; white-space: nowrap; pointer-events: none; box-shadow: 0 3px 10px rgba(0,0,0,.5); }
+  #tutTip[hidden] { display: none; }
+  #tutTip.above { transform: translate(-50%, -100%); }
+  #tutTip.above::after { content: ''; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); border: 7px solid transparent; border-top-color: #c9a45c; border-bottom: 0; }
+  #tutTipWho { flex: none; font-size: 11px; color: #1b140c; background: #e9c46a; border-radius: 10px; padding: 1px 7px; }
+  #tutTip button { pointer-events: auto; flex: none; font: inherit; font-size: 10px; font-weight: 600; color: #d8cba8; background: rgba(40,30,20,.9); border: 1px solid #7a6440; border-radius: 10px; padding: 1px 7px; cursor: pointer; }
   #tutLine button { pointer-events: auto; font: inherit; font-size: 11px; font-weight: 600; color: #d8cba8; background: rgba(40,30,20,.9); border: 1px solid #7a6440; border-radius: 12px; padding: 2px 8px; cursor: pointer; }
   @media (pointer: coarse) { #tut img { display: none; } #tut { padding: 5px 8px; gap: 6px; } #tutText { font-size: 12px; } #tutName { font-size: 11px; } }
   #tut.pop { animation: tutPop .3s ease-out; }
@@ -122,6 +128,7 @@
 </style>
 <div id="game"></div>
 <div id="tutLine" hidden><span id="tutLineText"></span><button id="tutLineSkip" type="button">跳過</button></div>
+<div id="tutTip" hidden><b id="tutTipWho">導師</b><span id="tutTipText"></span><button id="tutTipSkip" type="button">跳過教學</button></div>
 <div id="tut" hidden><img id="tutImg" src="art/npc_trainer.webp" alt=""><div style="flex:1"><div id="tutName">技能導師（新手教學）</div><div id="tutText"></div></div><button id="tutSkip" type="button">跳過教學</button></div>
 <div id="panel" hidden><div class="pbox" role="dialog" aria-modal="true" aria-labelledby="ptitle"><header><h2 id="ptitle"></h2><button id="pclose" type="button">關閉（Esc）</button></header><div class="pbody" id="pbody"></div></div></div>
 <div id="dlg" hidden><img id="dlgL" alt=""><img id="dlgR" alt=""><div class="dbox"><div id="dlgName"></div><div id="dlgText"></div><div class="dhint">▼</div><button id="dlgSkip" type="button">跳過 ▶▶</button></div></div>
@@ -1767,10 +1774,9 @@ const Tut = {
   },
   open(step) {
     this.cur = step; this.t = 0; if (step.reset) for (const k of step.reset) this.marks[k] = 0;
-    const el = this.el = this.el || document.getElementById('tut');
-    document.getElementById('tutText').textContent = step.text; el.hidden = false;
-    const g = step.who === 'guard'; document.getElementById('tutImg').src = g ? 'art/npc_guard.webp' : 'art/npc_trainer.webp';
-    document.getElementById('tutName').textContent = g ? '城門守衛（新手試煉）' : '技能導師（新手教學）'; el.classList.toggle('right', step.side === 'right'); this.place();
+    const el = this.el = this.el || document.getElementById('tutTip');
+    document.getElementById('tutTipText').textContent = step.text; el.hidden = false;
+    document.getElementById('tutTipWho').textContent = step.who === 'guard' ? '守衛' : '導師'; this.place();
     el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); SFX.tick();
   },
   finish() {
@@ -1783,10 +1789,14 @@ const Tut = {
   // keep the box over the empty strip right of the status panel and under the stage title / boss bar (follows the letterboxed canvas)
   place() {
     const cv = document.querySelector('#game canvas'); if (!cv || !this.el) return;
-    const r = cv.getBoundingClientRect();
-    if (IS_TOUCH && !this.el.classList.contains('right')) { const w = Math.min(r.width * 0.4, 420); Object.assign(this.el.style, { width: w + 'px', left: (r.left + r.width * 0.6) + 'px', top: (r.top + r.height * 0.15) + 'px' }); return; }
-    if (this.el.classList.contains('right')) { const w = Math.min(r.width * 0.32, 420); Object.assign(this.el.style, { width: w + 'px', left: (r.left + r.width - w / 2 - r.width * 0.015) + 'px', top: (r.top + r.height * 0.3) + 'px' }); }
-    else { const w = Math.min(r.width * 0.46, 600); Object.assign(this.el.style, { width: w + 'px', left: (r.left + r.width * 0.615) + 'px', top: (r.top + r.height * 0.165) + 'px' }); }
+    const r = cv.getBoundingClientRect(), k = r.width / W, c = this.cur, town = G.town && G.town.sys && G.town.sys.isActive() ? G.town : null;
+    const npc = c && c.target && town ? town.npcs.find(o => o.menu === c.target) : null;
+    if (npc) {
+      const sx = (npc.x - town.cam.scrollX) * k + r.left, half = this.el.offsetWidth / 2 + 6;
+      this.el.classList.add('above');
+      this.el.style.left = Math.max(r.left + half, Math.min(r.right - half, sx)) + 'px'; this.el.style.top = (r.top + (npc.y - 214) * k) + 'px';
+    } else { this.el.classList.remove('above'); this.el.style.left = (r.left + r.width / 2) + 'px'; this.el.style.top = (r.top + r.height * 0.13) + 'px'; }
+    this.el.style.visibility = Dialog.open || Panel.open ? 'hidden' : 'visible'; // never on top of a conversation or a shop window
   },
   update(dt) {
     if (!this.cur) return;
@@ -1806,35 +1816,36 @@ function tutLine(text) {
   document.getElementById('tutLineText').textContent = text; el.hidden = false;
   const cv = document.querySelector('#game canvas'); if (cv) { const r = cv.getBoundingClientRect(); el.style.left = (r.left + r.width / 2) + 'px'; el.style.top = (r.top + r.height * 0.12) + 'px'; }
 }
-window.addEventListener('load', () => { const s2 = document.getElementById('tutLineSkip'); if (s2) s2.addEventListener('click', e => { e.stopPropagation(); Tut.skip(); });
+window.addEventListener('load', () => { const s3 = document.getElementById('tutTipSkip'); if (s3) s3.addEventListener('click', e => { e.stopPropagation(); Tut.skip(); });
+  const s2 = document.getElementById('tutLineSkip'); if (s2) s2.addEventListener('click', e => { e.stopPropagation(); Tut.skip(); });
   const b = document.getElementById('tutSkip'); if (b) b.addEventListener('click', e => { e.stopPropagation(); Tut.skip(); }); });
 // town lesson: walk, buy potions, spend points, NPC "!" events, then head out through the gate
 function tutTown(scene) {
   if (Tut.off()) return;
   const p = scene.p, x0 = p.x;
-  Tut.say('town_move', `主神你好！我是技能導師……對，我知道你在螢幕外面。先用${KEYN.move}讓這個冒險者走兩步看看。`, { done: () => Math.abs(p.x - x0) > 160 });
-  Tut.say('town_potion', `走得不錯，至少沒撞牆。往右走到「藥水商人」旁邊按${KEYN.talk}，買幾瓶紅藥水。相信我，你會死很多次。`, { done: () => Tut.marks.menu_potion, target: 'potion' });
-  Tut.say('town_smith', `旁邊是「鐵匠」，撿到的裝備可以在他那裡強化或分解成晶石。他會跟鐵鎚講話，不要理他。`, { dur: 7, target: 'smith' });
-  Tut.say('town_trainer', `接著來找我！我是「技能導師」，升級拿到的屬性點和技能點都在我這裡點。不點也行，反正死的不是你。`, { done: () => Tut.marks.menu_trainer, target: 'trainer' });
-  Tut.say('town_events', '對了，NPC 頭上冒紅色「！」就是有事找你。答對有獎，答錯可能被偷錢。全城都是瘋子，我是比較正常的那個。', { dur: 8 });
-  Tut.say('town_gate', '準備好了就去最右邊找「城門守衛」，選第 1 關出發吧！我會在戰場上繼續碎念你。', { done: () => Tut.marks.menu_gate, target: 'gate' });
+  Tut.say('town_move', `用${KEYN.move}走兩步看看`, { done: () => Math.abs(p.x - x0) > 160 });
+  Tut.say('town_potion', `去「藥水商人」旁按${KEYN.talk}，買幾瓶紅藥水`, { done: () => Tut.marks.menu_potion, target: 'potion' });
+  Tut.say('town_smith', '「鐵匠」能強化、分解裝備（他會跟鐵鎚講話）', { dur: 7, target: 'smith' });
+  Tut.say('town_trainer', '來找我「技能導師」點屬性點和技能點', { done: () => Tut.marks.menu_trainer, target: 'trainer' });
+  Tut.say('town_events', 'NPC 頭上冒紅色「！」＝有事找你', { dur: 8 });
+  Tut.say('town_gate', '準備好就找最右邊的「城門守衛」出發', { done: () => Tut.marks.menu_gate, target: 'gate' });
 }
 // first stage: the basics in order, then situational tips whenever they first come up
 function tutStage(gm) {
   if (Tut.off()) return;
-  Tut.say('stg_attack', `到戰場了！按${KEYN.A}攻擊，連按可以打出連段。先打中怪物幾下看看。`, { done: () => (Tut.marks.hit || 0) >= 4, reset: ['hit'] });
-  Tut.say('stg_move', `${KEYN.jump}跳躍，${KEYN.S}是你這個職業的保命技（${gm.cls.defName}），被包圍的時候用。兩個都試一下！`, { done: () => Tut.marks.jump && Tut.marks.def, reset: ['jump', 'def'] });
-  Tut.say('stg_skill', `${KEYN.skills}是技能，會花藍色的魔力。放一個出來給我看看，讓我知道你有在聽。`, { done: () => Tut.marks.skill, reset: ['skill'] });
+  Tut.say('stg_attack', `按${KEYN.A}攻擊，連按打出連段`, { done: () => (Tut.marks.hit || 0) >= 4, reset: ['hit'] });
+  Tut.say('stg_move', `${KEYN.jump}跳躍，${KEYN.S}是保命技「${gm.cls.defName}」`, { done: () => Tut.marks.jump && Tut.marks.def, reset: ['jump', 'def'] });
+  Tut.say('stg_skill', `${KEYN.skills}放技能（會花魔力）`, { done: () => Tut.marks.skill, reset: ['skill'] });
 }
 function tutStageCheck(gm) {
   if (Tut.off() || gm.over) return;
   const p = gm.player, st = Tut.st();
-  if (!st.stg_potion && p.state !== 'dead' && p.hp < p.maxHp * 0.6) Tut.say('stg_potion', `血變少了！按${KEYN.red}喝紅藥水回血，${KEYN.blue}喝藍藥水回魔。藥水有 15 秒冷卻。`, { done: () => Tut.marks.drink, reset: ['drink'], urgent: true });
-  if (!st.stg_combo && gm.combo >= 10) Tut.say('stg_combo', '看到右上角的數字了嗎？那是連擊！連擊越高傷害越高，但只要被打到一下就歸零。', { dur: 7 });
-  if (!st.stg_elite && gm.enemies.some(e => e.elite && !e.dead && e.affixes && e.affixes.length && !e.sentry)) Tut.say('stg_elite', '頭上寫「菁英・XX」的是菁英怪，那些字是牠的特殊能力（詞綴），會改變打法。打贏掉寶比較好。', { dur: 8 });
-  if (!st.stg_deck && gm.enemies.some(e => e.sentry && !e.dead)) Tut.say('stg_deck', `高台上的怪會一直往下丟技能，紅圈就是落點。先按${KEYN.jump}跳上旁邊的階梯，再跳一次上高台打牠！`, { done: () => !gm.enemies.some(e => e.sentry && !e.dead), urgent: true });
-  if (!st.stg_bomb && gm.bombs && gm.bombs.length) Tut.say('stg_bomb', '頭上寫「自爆」的怪死掉會留下炸彈，倒數 3 秒就爆炸，會炸到你也會把其他怪炸飛。快閃開！', { dur: 6, urgent: true });
-  if (!st.stg_boss && gm.boss && !gm.boss.dead) Tut.say('stg_boss', '魔王出現了！看到地上紅色的警告區就閃開。打不過就回城強化，冒險者會原諒你的……大概吧。', { dur: 8, urgent: true });
+  if (!st.stg_potion && p.state !== 'dead' && p.hp < p.maxHp * 0.6) Tut.say('stg_potion', `血少了！按${KEYN.red}補血、${KEYN.blue}補魔`, { done: () => Tut.marks.drink, reset: ['drink'], urgent: true });
+  if (!st.stg_combo && gm.combo >= 10) Tut.say('stg_combo', '連擊越高傷害越高，被打到就歸零', { dur: 7 });
+  if (!st.stg_elite && gm.enemies.some(e => e.elite && !e.dead && e.affixes && e.affixes.length && !e.sentry)) Tut.say('stg_elite', '「菁英・XX」是詞綴：打法不同，掉寶較好', { dur: 8 });
+  if (!st.stg_deck && gm.enemies.some(e => e.sentry && !e.dead)) Tut.say('stg_deck', `高台的怪會丟技能：先跳上階梯，再跳上去打`, { done: () => !gm.enemies.some(e => e.sentry && !e.dead), urgent: true });
+  if (!st.stg_bomb && gm.bombs && gm.bombs.length) Tut.say('stg_bomb', '自爆怪死後 3 秒爆炸，快閃開！', { dur: 6, urgent: true });
+  if (!st.stg_boss && gm.boss && !gm.boss.dead) Tut.say('stg_boss', '魔王出場！看到紅色警告區就閃開', { dur: 8, urgent: true });
 }
 
 /* ================= NEW-PLAYER TRIAL (first time only) =================
@@ -5318,6 +5329,17 @@ const ExitGuard = {
   }
 };
 ExitGuard.init();
+// if the screen shape changes a lot after loading (rotated, or an app viewer resized the page), re-fit the game width:
+// safe outside a stage (the select screen and town are always saved), so reload there; mid-stage keep playing as is
+let refitT = null;
+window.addEventListener('resize', () => {
+  clearTimeout(refitT);
+  refitT = setTimeout(() => {
+    if (!window.__game || Math.abs(fitW() - W) < 40 || (IS_TOUCH && window.innerWidth < window.innerHeight)) return;
+    if (G.game && G.game.sys && G.game.sys.isActive()) return;
+    ExitGuard.leaving = true; Save.write(); location.reload();
+  }, 700);
+});
 const fontReady = (document.fonts && document.fonts.load) ? Promise.race([document.fonts.load('900 20px "Noto Serif TC"', '全員瘋子RPG'), new Promise(r => setTimeout(r, 2500))]) : Promise.resolve();
 // on a phone held upright, wait until it is turned sideways so the game is sized for the landscape screen
 const bootWhenLandscape = () => {
