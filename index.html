@@ -5515,7 +5515,18 @@ const unzoom = () => {
   const m = document.querySelector('meta[name=viewport]'); if (!m) return;
   const c = m.getAttribute('content'); m.setAttribute('content', c + ', minimum-scale=1'); setTimeout(() => m.setAttribute('content', c), 60);
 };
-const snapBack = () => { unzoom(); if (window.scrollX || window.scrollY) window.scrollTo(0, 0); document.documentElement.scrollTop = document.body.scrollTop = 0; try { if (window.__game) window.__game.scale.refresh(); } catch (e) {} };
+// some iPhone in-app browsers (LINE, IG, FB...) zoom anyway and ignore every setting: then the game and its windows are
+// laid over exactly the part of the page you can see, so the whole screen (HP bar, skills) stays in view at any zoom
+const FOLLOW = ['game', 'panel', 'dlg', 'rotate'];
+const fitVisual = () => {
+  const vv = window.visualViewport, z = vv && vv.scale > 1.02;
+  for (const id of FOLLOW) {
+    const el = document.getElementById(id); if (!el) continue;
+    if (z) Object.assign(el.style, { left: vv.offsetLeft + 'px', top: vv.offsetTop + 'px', width: vv.width + 'px', height: vv.height + 'px', right: 'auto', bottom: 'auto' });
+    else if (el.style.width) Object.assign(el.style, { left: '', top: '', width: '', height: '', right: '', bottom: '' });
+  }
+};
+const snapBack = () => { unzoom(); fitVisual(); const zoomed = window.visualViewport && window.visualViewport.scale > 1.02; if (!zoomed && (window.scrollX || window.scrollY)) window.scrollTo(0, 0); if (!zoomed) document.documentElement.scrollTop = document.body.scrollTop = 0; try { if (window.__game) { window.__game.scale.getParentBounds(); window.__game.scale.refresh(); } } catch (e) {} };
 if (window.visualViewport) { window.visualViewport.addEventListener("resize", snapBack); window.visualViewport.addEventListener("scroll", snapBack); }
 // fullscreen (entered when you pick a hero on a phone), rotation and resizes finish their layout late on phones:
 // measure again a few times so the canvas never stays at the old, larger size (zoomed in, buttons off screen)
