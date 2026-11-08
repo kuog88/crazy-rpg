@@ -30,6 +30,8 @@
   #panel button { font: inherit; font-size: 13px; color: var(--fg); background: #3a2e1d; border: 1px solid var(--gold); border-radius: 6px; padding: 5px 10px; cursor: pointer; min-height: 32px; }
   #panel button:hover:not(:disabled) { background: #5a4526; }
   #panel button:focus-visible { outline: 2px solid #e9c46a; outline-offset: 2px; }
+  #panel .kfoc { outline: 3px solid #ffe066 !important; outline-offset: 2px; box-shadow: 0 0 14px rgba(255,224,102,.55) !important; }
+  #panel .khint { color: #ffe066; font-size: 11px; margin-left: 4px; }
   #panel button:disabled { opacity: .4; cursor: default; }
   #panel button.primary { background: #8a6a2a; }
   /* character panel: body figure | selected item + bag + stats, reflowing for short phone screens */
@@ -358,6 +360,9 @@ const STAGES = {
 const ART = { imp: 'art/imp.webp', hellhound: 'art/hellhound.webp', eyedemon: 'art/eyedemon.webp', brute: 'art/brute.webp', succubus: 'art/succubus.webp', hydra: 'art/hydra.webp', mud: 'art/mud.webp', gargoyle: 'art/gargoyle.webp', venomslime: 'art/venomslime.webp', deathknight: 'art/deathknight.webp', skel: 'art/skel.webp', skelmage: 'art/skelmage.webp', troll: 'art/troll.webp', warrior: 'art/warrior.webp', mage: 'art/mage.webp', shield: 'art/shield.webp', paladin: 'art/paladin.webp', berserker: 'art/berserker.webp', archer: 'art/archer.webp', wolf: 'art/wolf.webp', fish: 'art/fish.webp', boss: 'art/boss.webp' }; // (old split backgrounds retired: every stage uses full painted maps now)
 /* Frame animations cut from Dreamina action videos: one sheet per character plus anims.json (frame size, feet anchor, frame lists). */
 function queueSheets(scene, meta, need) { for (const ch of need) if (meta[ch] && !scene.textures.exists('anim_' + ch)) scene.load.spritesheet('anim_' + ch, 'art/anim/' + ch + '.webp', { frameWidth: meta[ch].fw, frameHeight: meta[ch].fh }); }
+function freeSheets(scene, keep) {
+  for (const key of scene.textures.getTextureKeys()) if (key.startsWith('anim_') && !keep.includes(key.slice(5))) scene.textures.remove(key);
+}
 function loadArt(scene, need) {
   need = need || [];
   for (const k in ART) if (!scene.textures.exists('spr_' + k)) scene.load.image('spr_' + k, ART[k]);
@@ -800,12 +805,33 @@ const Panel = {
   show(title, render, onClose) {
     this.el = this.el || document.getElementById('panel');
     document.getElementById('ptitle').textContent = title;
-    this.render = render; this.onClose = onClose; this.open = true; this.el.hidden = false; this.refresh();
+    this.render = render; this.onClose = onClose; this.open = true; this.el.hidden = false; PanelKeys.idx = 0; this.refresh();
     setTimeout(() => { const b = document.getElementById('pclose'); if (b) b.focus(); }, 0);
   },
-  refresh(msg) { const body = document.getElementById('pbody'); body.innerHTML = ''; this.render(body, msg || ''); },
+  refresh(msg) { const body = document.getElementById('pbody'); body.innerHTML = ''; this.render(body, msg || ''); PanelKeys.mark(PanelKeys.idx); },
   close() { if (!this.open) return; this.open = false; this.el.hidden = true; const cb = this.onClose; this.onClose = null; if (cb) cb(); }
 };
+/* keyboard control for every window: up/down (or left/right) moves the highlight, Enter / Space / A presses it,
+   Esc closes; buttons with data-hot="Digit1" etc. also answer to that key */
+const PanelKeys = {
+  idx: 0,
+  items() { const b = document.getElementById('pbody'); return b ? [...b.querySelectorAll('button:not(:disabled), a[href], [data-k]')].filter(el => el.offsetParent !== null) : []; },
+  mark(i) {
+    const it = this.items(); document.querySelectorAll('#pbody .kfoc').forEach(el => el.classList.remove('kfoc'));
+    if (!it.length) return;
+    this.idx = ((i % it.length) + it.length) % it.length; const el = it[this.idx];
+    el.classList.add('kfoc'); try { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+  }
+};
+window.addEventListener('keydown', e => { // on window (capture) like the panel's key blocker, so it actually receives the keys
+  if (!Panel.open || (typeof Dialog !== 'undefined' && Dialog.open)) return;
+  const k = e.code;
+  if (k === 'ArrowDown' || k === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); PanelKeys.mark(PanelKeys.idx + 1); }
+  else if (k === 'ArrowUp' || k === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); PanelKeys.mark(PanelKeys.idx - 1); }
+  else if (k === 'Enter' || k === 'Space' || k === 'KeyA' || k === 'NumpadEnter') { e.preventDefault(); e.stopPropagation(); if (e.repeat) return; const el = PanelKeys.items()[PanelKeys.idx]; if (el) el.click(); }
+  else { const hot = document.querySelector(`#pbody [data-hot="${k}"]`); if (hot && !hot.disabled) { e.preventDefault(); e.stopPropagation(); hot.click(); } }
+}, true);
+window.addEventListener('keyup', e => { if (Panel.open && (e.code === 'Space' || e.code === 'Enter')) e.preventDefault(); }, true); // no second native "click" on key release
 /* ---------------- story dialogue: portrait on the speaker's side, typewriter text, A / Space / click to advance ---------------- */
 const HEROES = ['warrior', 'mage', 'shield', 'paladin', 'berserker', 'archer'];
 const SPEAKER = { warrior: '戰士', mage: '魔法師', shield: '盾戰士', paladin: '聖騎士', berserker: '狂戰士', archer: '弓箭手', boss: '腐根樹妖', troll: '地底巨魔酋長', venomslime: '毒液史萊姆', deathknight: '死亡騎士', succubus: '魅魔', brute: '深淵蠻魔', elder: '聖堂老教主' };
@@ -1143,8 +1169,8 @@ const Menus = {
       };
       const cnt = r => ch.bag.filter(it => it.rarity <= r).length;
       bag.append(h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px' },
-        h('button', { disabled: !cnt(2), on: { click: () => bulk(2) } }, `批量分解：稀有以下（${cnt(2)} 件）`),
-        h('button', { disabled: !cnt(3), on: { click: () => bulk(3) } }, `批量分解：史詩以下（${cnt(3)} 件）`)));
+        h('button', { 'data-hot': 'Digit1', disabled: !cnt(2), on: { click: () => bulk(2) } }, `批量分解：稀有以下（${cnt(2)} 件）`, h('span', { class: 'khint' }, '［1］')),
+        h('button', { 'data-hot': 'Digit2', disabled: !cnt(3), on: { click: () => bulk(3) } }, `批量分解：史詩以下（${cnt(3)} 件）`, h('span', { class: 'khint' }, '［2］'))));
       if (!ch.bag.length) bag.append(h('div', { class: 'muted' }, '背包是空的。'));
       ch.bag.forEach(it => bag.append(row(it, 'bag')));
       body.append(h('div', { class: 'cols' }, eq, bag));
@@ -1405,7 +1431,7 @@ Menus.char = function (cls) {
     body.append(h('div', { class: 'msg ok' }, msg));
     const slotBox = (it, label, size) => {
       const col = it ? RAR[it.rarity].c : '#5a4a32';
-      return h('div', { style: `width:${size}px;height:${size}px;border:2px solid ${col};border-radius:8px;background:#1d1711;color:${it ? col : '#6a5a40'};position:relative;padding:8px;box-sizing:border-box;cursor:pointer`, title: it ? itemName(it) : label, html: (it ? iconImg(it) : `<div style="opacity:.35;width:100%;height:100%">${iconSVG(label)}</div>`) + (it && it.plus ? `<span style="position:absolute;right:3px;bottom:1px;font-size:11px;color:#ffd27a;font-weight:700">+${it.plus}</span>` : '') });
+      return h('div', { 'data-k': '1', style: `width:${size}px;height:${size}px;border:2px solid ${col};border-radius:8px;background:#1d1711;color:${it ? col : '#6a5a40'};position:relative;padding:8px;box-sizing:border-box;cursor:pointer`, title: it ? itemName(it) : label, html: (it ? iconImg(it) : `<div style="opacity:.35;width:100%;height:100%">${iconSVG(label)}</div>`) + (it && it.plus ? `<span style="position:absolute;right:3px;bottom:1px;font-size:11px;color:#ffd27a;font-weight:700">+${it.plus}</span>` : '') });
     };
     // body figure
     const SLOT = IS_TOUCH ? 64 : 58, CELL = IS_TOUCH ? 60 : 54;
@@ -1749,7 +1775,7 @@ function npcEventPanel(scene, n) {
       else { SFX.hit(true); finish(E.lose, npcPenalty(ch), false); }
     };
     const opts = flip ? [['b', E.b], ['a', E.a]] : [['a', E.a], ['b', E.b]];
-    body.append(...opts.map((o, k) => h('button', { type: 'button', class: 'big', on: { click: () => pick(o[0]) } }, (k ? 'B　' : 'A　') + o[1])));
+    body.append(...opts.map((o, k) => h('button', { type: 'button', class: 'big', 'data-hot': 'Digit' + (k + 1), on: { click: () => pick(o[0]) } }, (k ? 'B　' : 'A　') + o[1], h('span', { class: 'khint' }, `［${k + 1}］`))));
   });
 }
 
@@ -1912,9 +1938,9 @@ class Town extends Phaser.Scene {
   init(data) { this.clsKey = (data && data.cls) || 'warrior'; this.msg = data && data.msg; }
   preload() {
     const pg = this.add.graphics(); this.load.on('progress', v => { if (!pg.scene) return; pg.clear(); pg.fillStyle(0xc9a45c, 1); pg.fillRect(W / 2 - 150, H / 2, 300 * v, 4); }); this.load.once('complete', () => { if (pg.scene) pg.destroy(); });
-    loadArt(this, [this.clsKey, 'wolf', 'fish', 'boss', 'donkey']); for (const k in TOWN_ART) if (!this.textures.exists(k)) this.load.image(k, TOWN_ART[k]); loadGlows(this); }
+    loadArt(this, [this.clsKey, 'donkey']); for (const k in TOWN_ART) if (!this.textures.exists(k)) this.load.image(k, TOWN_ART[k]); loadGlows(this); }
   create() {
-    G.town = this; G.curCls = this.clsKey; Panel.close(); this.petSpr = null; this.petO = null; RAW.hit = {};
+    G.town = this; G.curCls = this.clsKey; Panel.close(); freeSheets(this, [this.clsKey, 'donkey']); this.petSpr = null; this.petO = null; RAW.hit = {};
     BGM.play('town'); this.events.once('shutdown', () => { BGM.stop(); Tut.clear(); if (this.tutArrow) this.tutArrow = null; });
     this.tutArrow = this.add.text(0, 0, '▲', TXT(30, '#ffe066', { fontStyle: '900', strokeThickness: 6 })).setOrigin(0.5).setDepth(9002).setVisible(false);
     this.time.delayedCall(900, () => tutTown(this));
@@ -2269,7 +2295,8 @@ class Game extends Phaser.Scene {
   preload() {
     const S = this.stage;
     const portalKinds = S.portal ? [S.portal.mini, ...new Set(S.portal.waves.flat().map(t => t.replace(/E$/, '')))] : [];
-    loadArt(this, [this.clsKey, ...S.mobs, ...S.elites, S.boss, ...portalKinds, 'wolf']);
+    this.sheetKeys = [this.clsKey, ...S.mobs, ...S.elites, S.boss, ...portalKinds, 'wolf'];
+    loadArt(this, this.sheetKeys);
     if (S.portal && !this.textures.exists(S.portal.map)) this.load.image(S.portal.map, S.portal.file);
     if (!this.textures.exists('fx_portal')) this.load.image('fx_portal', 'art/fx/portal.webp');
     if (this.trial) for (const k of ['npc_guard', 'npc_elder']) if (!this.textures.exists(k)) this.load.image(k, `art/${k}.webp`);
@@ -2291,7 +2318,7 @@ class Game extends Phaser.Scene {
     return true;
   }
   create() {
-    G.game = this; G.msgQ = []; G.curCls = this.clsKey;
+    G.game = this; G.msgQ = []; G.curCls = this.clsKey; freeSheets(this, this.sheetKeys);
     for (const v of ['hurt1', 'hurt2', 'ult']) SFX.loadVoice(`${this.clsKey}_${v}`, `art/vo/${this.clsKey}_${v}.mp3`);
     const need = [this.clsKey, ...this.stage.mobs, ...this.stage.elites, this.stage.boss];
     this.useArt = need.every(k => this.textures.exists('spr_' + k));
@@ -2311,7 +2338,7 @@ class Game extends Phaser.Scene {
     this.rocks = []; this.fires = []; this.aura = null; this.martyrUsed = false; this.capWarned = false; this.reserve = 0;
     this.run = { boons: {}, runes: [null, null, null, null], echoN: 0 };
     this.pendingSpawns = 0; this.portal = null; this.portalUsed = false; this.inPortal = false; this.miniBoss = null; this.gas = []; this.arena = null;
-    this.portalSpr = null; this.portalTxt = null; this.saved = null;
+    this.portalSpr = null; this.portalTxt = null; this.saved = null; this.bubble = null; this.banterT = undefined; this.lastElites = 0; this.lowSaid = false;
     this.portalWave = randi(1, WAVES.length - 1); // portal opens after clearing this wave (1-14)
     // stage opening monologue: once per stage and class per play session (not again on every retry)
     G.seen = G.seen || {};
@@ -4037,7 +4064,7 @@ class Game extends Phaser.Scene {
       body.append(h('div', { class: 'msg ok' }, msg));
       body.append(h('div', { class: 'muted', style: 'margin-bottom:8px' }, `背包 ${ch.bag.length} / ${BAG_MAX}　礦物晶石 ${ch.crystals}。分解後空出的格子，地上的裝備會自動飛進來。換裝備請回主城。`));
       const quick = h('div', { class: 'row' }, h('div', { class: 'grow muted' }, '一鍵分解：'),
-        ...[0, 1, 2].map(r => h('button', { disabled: !ch.bag.some(it => it.rarity <= r), on: { click: () => { let n = 0, c = 0; for (const it of ch.bag.filter(it => it.rarity <= r)) { n += salvage(it); c++; } Save.write(); Panel.refresh(`分解了 ${c} 件，得到 ${n} 顆礦物晶石`); } } }, `${RAR[r].n}以下`)));
+        ...[0, 1, 2].map(r => h('button', { 'data-hot': 'Digit' + (r + 1), disabled: !ch.bag.some(it => it.rarity <= r), on: { click: () => { let n = 0, c = 0; for (const it of ch.bag.filter(it => it.rarity <= r)) { n += salvage(it); c++; } Save.write(); Panel.refresh(`分解了 ${c} 件，得到 ${n} 顆礦物晶石`); } } }, `${RAR[r].n}以下`, h('span', { class: 'khint' }, `［${r + 1}］`))));
       body.append(quick);
       if (!ch.bag.length) body.append(h('div', { class: 'muted' }, '背包是空的。'));
       ch.bag.slice().sort((a, b) => b.rarity - a.rarity).forEach(it => {
@@ -4394,7 +4421,7 @@ class Game extends Phaser.Scene {
     if (!force && (this.banterCd > 0 || Dialog.open || this.paused)) return null;
     let t = L[randi(0, L.length - 1)]; if (t === this.lastBanter && L.length > 1) t = L[(L.indexOf(t) + 1) % L.length];
     this.lastBanter = t; this.banterCd = 7;
-    if (!this.bubble) this.bubble = this.add.text(0, 0, '', TXT(15, '#fff6e0', { fontStyle: '900', backgroundColor: '#1c1410dd', padding: { x: 10, y: 6 }, wordWrap: { width: 280, useAdvancedWrap: true }, align: 'center', strokeThickness: 3 })).setOrigin(0.5, 1).setDepth(9450);
+    if (!this.bubble || !this.bubble.scene) this.bubble = this.add.text(0, 0, '', TXT(15, '#fff6e0', { fontStyle: '900', backgroundColor: '#1c1410dd', padding: { x: 10, y: 6 }, wordWrap: { width: 280, useAdvancedWrap: true }, align: 'center', strokeThickness: 3 })).setOrigin(0.5, 1).setDepth(9450);
     this.bubble.setText(t).setVisible(true).setAlpha(1).setScale(0.6); this.tweens.add({ targets: this.bubble, scale: 1, duration: 160, ease: 'Back.out' });
     this.bubbleT = 3.6; SFX.tick(); return t;
   }
