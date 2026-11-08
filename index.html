@@ -2691,11 +2691,11 @@ class Game extends Phaser.Scene {
     p.skill = { id: sk.id, idx: i, lv, done: {}, inst: new Set(), dur: { whirl: lv >= 5 ? 0.62 : 0.55, charge: 0.38, smash: 0.7, quake: 0.85, fireball: 0.38, nova: 0.5, beam: lv >= 10 ? 1.45 : lv >= 5 ? 1.25 : 1.05, meteor: 0.6,
       bash: 0.4, roar: 0.6, wall: 0.4, ram: 0.95, holyslash: 0.4, heal: 0.5, aegis: 0.4, judge: 0.9, flurry: lv >= 5 ? 0.72 : 0.58, leap: 0.62, bloodlust: 0.5, frenzy: 0.6, triple: 0.4, backshot: 0.45, blast: 0.5, rain: 0.6 }[sk.id] };
     const big = ['quake', 'meteor', 'ram', 'judge', 'frenzy', 'rain'];
-    if (sk.id === 'wall') { p.wallT = lv >= 5 ? 8 : 6; this.floatText(p.x, p.y - 110, '盾牆', '#cfe0ff'); }
-    if (sk.id === 'aegis') { p.shieldHp = Math.max(p.shieldHp, Math.round(p.maxHp * (lv >= 10 ? 1 : lv >= 5 ? 0.8 : 0.6))); p.shieldT = 8; p.aegisDr = true; p.aegisBurst = lv >= 10; this.ring(p.x, p.y - 50, 80, 0xffe9a8, 0.5, false); }
-    if (sk.id === 'bloodlust') { p.bloodT = lv >= 5 ? 10 : 8; this.floatText(p.x, p.y - 110, '嗜血', '#ff6a5a'); }
-    if (sk.id === 'frenzy') { p.frenzyT = lv >= 5 ? 12 : 10; SFX.roar(); this.cam.shake(250, 0.01); }
-    if (sk.id === 'heal') { const amt = p.maxHp * (lv >= 10 ? 0.25 : lv >= 5 ? 0.18 : 0.12); p.heal += amt; p.healRate = Math.max(p.healRate, amt / 4); this.ring(p.x, p.y, 120, 0x9fffb0, 0.6, true); SFX.potion();
+    if (sk.id === 'wall') { p.wallT = lv >= 5 ? 8 : 6; this.floatText(p.x, p.y - 110, '盾牆', '#cfe0ff'); this.fxSprite('fx_power', p.x + p.face * 40, p.y - 60, { sx: 0.45, sy: 0.7, tint: 0xcfe0ff, dur: 0.35, grow: 1.4 }); }
+    if (sk.id === 'aegis') { p.shieldHp = Math.max(p.shieldHp, Math.round(p.maxHp * (lv >= 10 ? 1 : lv >= 5 ? 0.8 : 0.6))); p.shieldT = 8; p.aegisDr = true; p.aegisBurst = lv >= 10; this.ring(p.x, p.y - 50, 80, 0xffe9a8, 0.5, false); this.fxSprite('fx_power', p.x, p.y - 60, { sx: 0.6, sy: 0.6, tint: 0xffe9a8, dur: 0.4, grow: 1.7 }); this.sparks(p.x, p.y - 70, 0xffe9a8, 12); }
+    if (sk.id === 'bloodlust') { p.bloodT = lv >= 5 ? 10 : 8; this.floatText(p.x, p.y - 110, '嗜血', '#ff6a5a'); this.fxSprite('fx_fire', p.x, p.y - 60, { sx: 0.55, sy: 0.7, tint: 0xff3a3a, dur: 0.45, grow: 1.5 }); this.sparks(p.x, p.y - 60, 0xff3a3a, 14); }
+    if (sk.id === 'frenzy') { p.frenzyT = lv >= 5 ? 12 : 10; SFX.roar(); this.cam.shake(250, 0.01); this.fxSprite('fx_fire', p.x, p.y - 55, { sx: 0.9, sy: 0.9, tint: 0xff5a2a, dur: 0.5, grow: 1.8 }); this.ring(p.x, p.y, 170, 0xff5a2a, 0.45, true); this.sparks(p.x, p.y - 60, 0xff8a5a, 18); }
+    if (sk.id === 'heal') { const amt = p.maxHp * (lv >= 10 ? 0.25 : lv >= 5 ? 0.18 : 0.12); p.heal += amt; p.healRate = Math.max(p.healRate, amt / 4); this.ring(p.x, p.y, 120, 0x9fffb0, 0.6, true); SFX.potion(); this.fxSprite('fx_magic', p.x, p.y - 60, { sx: 0.5, sy: 0.5, tint: 0x9fffb0, dur: 0.6, grow: 1.6 }); for (let k = 0; k < 6; k++) this.after(k * 0.12, () => this.sparks(p.x + rand(-30, 30), p.y - rand(20, 110), 0x9fffb0, 3));
       if (lv >= 10) this.explode(p.x, p.y, { r: 150, mult: 1, kb: 120, stun: 0.3, color: 0xffe9a8, skill: i }); }
     if (sk.id === 'leap') { p.vz = 560; p.invuln = 0.5; }
     if (sk.id === 'backshot') { p.vz = 300; p.invuln = 0.3; }
@@ -2726,6 +2726,7 @@ class Game extends Phaser.Scene {
         p.vx = inp.mx * 120; p.vy = inp.my * 70;
         (s.lv >= 5 ? [0.08, 0.22, 0.36, 0.5] : [0.08, 0.24, 0.40]).forEach((at, j) => once('w' + j, at, () => {
           SFX.swing(); this.ring(p.x, p.y - 40, 110, 0xffffff, 0.15, false);
+          this.slashFx(p, -1.9, 1.1, 64, 0xffffff, 8); this.slashFx({ x: p.x, y: p.y, z: p.z, face: -f }, 1.1, -1.9, 64, 0xffffff, 8);
           if (s.lv >= 10) for (const e of this.enemies) if (!e.dead && e.kind !== 'boss' && Math.abs(e.x - p.x) < 220 && Math.abs(e.y - p.y) < 80) { e.x += (p.x - e.x) * 0.35; e.y += (p.y - e.y) * 0.35; }
           this.hitEnemies({ x0: p.x - 115, x1: p.x + 115, y: p.y, yTol: 42, z: 0, cx: p.x }, { mult: 0.8, kb: 110, stun: 0.3, hs: 0.035, skill: 0 });
         }));
@@ -2736,6 +2737,7 @@ class Game extends Phaser.Scene {
         if (t < 0.32) {
           this.hitEnemies({ x0: f > 0 ? p.x - 20 : p.x - 60, x1: f > 0 ? p.x + 60 : p.x + 20, y: p.y, yTol: 34, z: 0, dir: f }, { mult: 1.6, kb: 300, launch: 330, hs: 0.06, heavy: true, skill: 1 }, s.inst);
           if (Math.random() < 0.5) this.dust(p.x - f * 20, p.y);
+          if (Math.random() < 0.45) this.ghost(p, 0xffb84a);
         }
         if (s.lv >= 10) once('end', 0.33, () => this.explode(p.x + f * 30, p.y, { r: 110, mult: 1.5, kb: 260, launch: 300, hs: 0.05, shake: 0.01, color: 0xffb84a, skill: 1 }));
         break;
@@ -2768,6 +2770,8 @@ class Game extends Phaser.Scene {
         once('nova', 0.14, () => {
           const R = s.lv >= 5 ? 230 : 175;
           SFX.freeze(); this.ring(p.x, p.y, R, 0xbfe9ff, 0.45, true); this.ring(p.x, p.y - 30, R - 25, 0xe8f8ff, 0.3, false);
+          this.fxSprite('fx_ice', p.x, p.y - 50, { sx: 0.55, sy: 0.55, dur: 0.4, grow: 1.6 });
+          for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2; this.fxSprite('fx_ice', p.x + Math.cos(a) * R * 0.75, p.y + Math.sin(a) * R * 0.26 - 24, { sx: 0.22, sy: 0.22, rot: rand(0, 6.28), dur: 0.5, grow: 1.3 }); }
           this.hitEnemies({ x0: p.x - R, x1: p.x + R, y: p.y, yTol: R * 0.54, z: 0, zTol: 200, cx: p.x }, { mult: s.lv >= 10 ? 1.8 : 1.3, kb: 60, stun: 0.2, freeze: s.lv >= 10 ? 3.5 : 2.2, hs: 0.05, skill: 1 });
         });
         break;
@@ -2802,6 +2806,7 @@ class Game extends Phaser.Scene {
         p.vx = t < 0.15 ? f * 220 : 0;
         once('hit', 0.15, () => {
           const R = s.lv >= 5 ? 130 : 95; SFX.hit(true); this.ring(p.x + f * 50, p.y - 50, 40, 0xcfe0ff, 0.2, false);
+          this.fxSprite('fx_power', p.x + f * 70, p.y - 60, { sx: 0.35, sy: 0.35, rot: rand(0, 6.28), tint: 0xcfe0ff, dur: 0.22, grow: 1.6 });
           this.hitEnemies({ x0: f > 0 ? p.x : p.x - R, x1: f > 0 ? p.x + R : p.x, y: p.y, yTol: 36, z: 0, dir: f }, { mult: 1.4, kb: 160, stun: s.lv >= 5 ? 2 : 1.2, hs: 0.08, shake: 0.006, skill: 0 });
           if (s.lv >= 10) this.addProj({ owner: 'p', kind: 'wave', x: p.x + f * 40, y: p.y, z: 40, vx: f * 760, vy: 0, r: 28, life: 0.5, mult: 1, kb: 160, stun: 1, pierce: true, skill: 0 });
         });
@@ -2809,7 +2814,8 @@ class Game extends Phaser.Scene {
       case 'roar':
         p.vx = 0;
         once('roar', 0.2, () => {
-          SFX.roar(); this.cam.shake(220, 0.008); this.ring(p.x, p.y, 210, 0xffd27a, 0.5, true);
+          SFX.roar(); this.cam.shake(220, 0.008); this.ring(p.x, p.y, 210, 0xffd27a, 0.5, true); this.ring(p.x, p.y - 60, 150, 0xffd27a, 0.4, false);
+          this.fxSprite('fx_power', p.x, p.y - 60, { sx: 0.8, sy: 0.6, tint: 0xffd27a, dur: 0.45, grow: 1.8 });
           if (s.lv >= 10) for (const e of this.enemies) if (!e.dead && e.kind !== 'boss' && Math.abs(e.x - p.x) < 320) { e.x += (p.x - e.x) * 0.5; e.y += (p.y - e.y) * 0.5; }
           this.hitEnemies({ x0: p.x - 200, x1: p.x + 200, y: p.y, yTol: 90, z: 0, zTol: 200, cx: p.x }, { mult: 0.5, kb: 40, stun: s.lv >= 5 ? 1.8 : 1, skill: 1 });
           p.drT = 5; p.drPct = s.lv >= 10 ? 0.5 : 0.3;
@@ -2822,6 +2828,7 @@ class Game extends Phaser.Scene {
           for (const e of this.enemies) if (!e.dead && e.kind !== 'boss' && e.state !== 'down' && Math.abs(e.x - (p.x + f * 40)) < 50 && Math.abs(e.y - p.y) < 40) { s.inst.add(e); }
           for (const e of s.inst) if (!e.dead) { e.x = p.x + f * 55; e.y = p.y; this.setState(e, 'stun'); e.stun = 0.4; this.release(e); }
           if (Math.random() < 0.5) this.dust(p.x - f * 20, p.y);
+          if (Math.random() < 0.4) this.ghost(p, 0xcfe0ff);
         }
         once('boom', 0.75, () => { this.explode(p.x + f * 60, p.y, { r: 150, mult: s.lv >= 10 ? 6.5 : 4, kb: 320, launch: 500, hs: 0.15, shake: 0.024, heavy: true, color: 0xcfe0ff, big: true, skill: 3 }); this.crack(p.x + f * 60, p.y); });
         break;
@@ -2844,7 +2851,8 @@ class Game extends Phaser.Scene {
             this.after(delay, () => {
               this.effects.push({ t: 0, dur: 0.55, ground: true, draw: (g, k) => { g.lineStyle(3, 0xffe9a8, 0.9); g.strokeEllipse(tx, ty, R * 2, R * 0.7); g.fillStyle(0xffe9a8, 0.1 + 0.2 * k); g.fillEllipse(tx, ty, R * 2 * k, R * 0.7 * k); } });
               this.effects.push({ t: 0, dur: 0.55, draw: (g, k) => { const hy = ty - 520 * (1 - k * k); g.fillStyle(0xffe9a8, 0.25); g.fillRect(tx - 60, hy - 110, 120, 90); g.fillStyle(0xd8c48a, 1); g.fillRect(tx - 46, hy - 100, 92, 70); g.fillStyle(0x8a6a2a, 1); g.fillRect(tx - 6, hy - 200, 12, 110); } });
-              this.after(0.55, () => this.explode(tx, ty, { r: R, mult: 6, kb: 300, launch: 520, hs: 0.16, shake: 0.028, heavy: true, color: 0xffe9a8, big: true, skill: 3 }));
+              if (this.textures.exists('fxg_pillar_o')) { const pil = this.add.image(tx, ty + 10, 'fxg_pillar_o').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setScale(0.9 * ART_S, 1.5 * ART_S).setAlpha(0).setDepth(8300); this.tweens.add({ targets: pil, alpha: 0.85, duration: 450, yoyo: true, hold: 150, onComplete: () => pil.destroy() }); }
+              this.after(0.55, () => { this.explode(tx, ty, { r: R, mult: 6, kb: 300, launch: 520, hs: 0.16, shake: 0.028, heavy: true, color: 0xffe9a8, big: true, skill: 3 }); this.fxSprite('fx_power', tx, ty - 60, { sx: 1, sy: 0.8, tint: 0xffe9a8, dur: 0.45, grow: 1.6 }); });
             });
           }
         });
@@ -2883,7 +2891,10 @@ class Game extends Phaser.Scene {
         once('call', 0.25, () => {
           const R = s.lv >= 10 ? 300 : 220, dur = s.lv >= 5 ? 3 : 2, tx = clamp(p.x + f * 280, this.cam.scrollX + 80, this.cam.scrollX + W - 80), ty = p.y;
           this.effects.push({ t: 0, dur, ground: true, draw: (g, k) => { g.lineStyle(2, 0xb9d68a, 0.7); g.strokeEllipse(tx, ty, R * 2, R * 0.6); } });
-          this.effects.push({ t: 0, dur, draw: (g, k, ef) => { g.lineStyle(2, 0xe8f0d0, 0.8); for (let i = 0; i < 14; i++) { const ax = tx + ((i * 73 + ef.t * 900) % (R * 2)) - R, ay = ty - 260 + ((i * 131 + ef.t * 1400) % 260); g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax - 8, ay + 26); g.strokePath(); } } });
+          this.effects.push({ t: 0, dur, ground: true, draw: (g, k) => { g.fillStyle(0xb9d68a, 0.08 + 0.05 * Math.sin(k * 40)); g.fillEllipse(tx, ty, R * 2, R * 0.6); } });
+          for (let j = 0; j < 4; j++) this.fxSprite('fx_arrow', p.x + f * 20, p.y - p.z - 100 - j * 20, { sx: 0.35, sy: 0.25, rot: -Math.PI / 2 + (j - 1.5) * 0.12, dur: 0.22, grow: 1.1 }); // volley into the sky
+          const per = s.lv >= 10 ? 7 : 5;
+          for (let k2 = 0; k2 < Math.round(dur / 0.15); k2++) this.after(0.2 + k2 * 0.15, () => { for (let q = 0; q < per; q++) this.dropArrow(tx + rand(-R, R) * 0.92, ty + rand(-R, R) * 0.27); });
           const ticks = Math.round(dur / 0.15);
           for (let k2 = 0; k2 < ticks; k2++) this.after(k2 * 0.15, () => this.hitEnemies({ x0: tx - R, x1: tx + R, y: ty, yTol: R * 0.32, z: 0, zTol: 300, cx: tx }, { mult: s.lv >= 10 ? 0.8 : 0.6, kb: 20, stun: 0.2, skill: 3 }, new Set()));
         });
@@ -2895,7 +2906,10 @@ class Game extends Phaser.Scene {
             const tx = clamp(p.x + f * 300 + ox2, this.cam.scrollX + 60, this.cam.scrollX + W - 60), ty = clamp(p.y + oy2, GROUND_TOP + 20, GROUND_BOT);
             this.after(delay, () => {
               this.effects.push({ t: 0, dur: 0.9, ground: true, draw: (g, k) => { g.lineStyle(3, 0xff5a2a, 0.9); g.strokeEllipse(tx, ty, R * 2, R * 0.7); g.fillStyle(0xff5a2a, 0.12 + 0.2 * k); g.fillEllipse(tx, ty, R * 2 * k, R * 0.7 * k); } });
-              this.effects.push({ t: 0, dur: 0.9, draw: (g, k) => { const mx = tx + 260 * (1 - k), my = ty - 560 * (1 - k); g.fillStyle(0xff7a2a, 0.35); g.fillCircle(mx, my, 40); g.fillStyle(0xffd27a, 1); g.fillCircle(mx, my, 22); } });
+              if (this.textures.exists('fx_fire')) {
+                const rock = this.add.image(tx + 260, ty - 560, 'fx_fire').setBlendMode(Phaser.BlendModes.ADD).setScale(0.75 * ART_S).setRotation(2.0).setDepth(8450);
+                this.tweens.add({ targets: rock, x: tx, y: ty - 30, duration: 900, ease: 'Quad.in', onUpdate: () => { if (Math.random() < 0.5) this.sparks(rock.x + rand(-20, 20), rock.y + rand(-20, 20), 0xff9a3a, 1); }, onComplete: () => rock.destroy() });
+              } else this.effects.push({ t: 0, dur: 0.9, draw: (g, k) => { const mx = tx + 260 * (1 - k), my = ty - 560 * (1 - k); g.fillStyle(0xff7a2a, 0.35); g.fillCircle(mx, my, 40); g.fillStyle(0xffd27a, 1); g.fillCircle(mx, my, 22); } });
               this.after(0.9, () => this.explode(tx, ty, { r: R, mult: 6, kb: 300, launch: 520, hs: 0.16, shake: 0.028, heavy: true, color: 0xff7a2a, big: true, skill: 3 }));
             });
           }
@@ -4688,16 +4702,16 @@ class Game extends Phaser.Scene {
   /* ---------- effects helpers ---------- */
   slashFx(p, a0, a1, r, color, width) {
     const f = p.face, cx = p.x + f * 8 * ART_S, cy = p.y - p.z - (this.useArt ? 62 : 46) * ART_S;
-    if (this.useArt) r *= 1.25; r *= ART_S;
+    if (this.useArt) r *= 1.25;
     const fxKey = { warrior: 'fx_slash_warrior', shield: 'fx_slash_shield', paladin: 'fx_slash_paladin', berserker: 'fx_slash_berserker' }[this.clsKey];
     if (fxKey && this.textures.exists(fxKey)) {
-      const sc = r / 150, heavy = width >= 10;
-      this.fxSprite(fxKey, cx + f * r * 0.45, cy, { sx: f * sc * (heavy ? 1.35 : 1.1), sy: sc * (a1 < a0 ? -1 : 1) * (heavy ? 1.3 : 1), rot: f * (a0 + a1) * 0.12, dur: heavy ? 0.26 : 0.18, tint: heavy ? 0xffe6b0 : undefined });
+      const sc = r / 150, heavy = width >= 10; // fxSprite applies the character scale itself
+      this.fxSprite(fxKey, cx + f * r * ART_S * 0.45, cy, { sx: f * sc * (heavy ? 1.35 : 1.1), sy: sc * (a1 < a0 ? -1 : 1) * (heavy ? 1.3 : 1), rot: f * (a0 + a1) * 0.12, dur: heavy ? 0.26 : 0.18, tint: heavy ? 0xffe6b0 : undefined });
       return;
     }
     this.effects.push({ t: 0, dur: 0.16, draw: (g, k) => {
       g.lineStyle(width * (1 - k * 0.7), color, 0.9 * (1 - k)); g.beginPath();
-      for (let i = 0; i <= 12; i++) { const a = lerp(a0, a1, i / 12), px = cx + Math.cos(a) * r * f, py = cy + Math.sin(a) * r; if (i) g.lineTo(px, py); else g.moveTo(px, py); }
+      for (let i = 0; i <= 12; i++) { const a = lerp(a0, a1, i / 12), px = cx + Math.cos(a) * r * ART_S * f, py = cy + Math.sin(a) * r * ART_S; if (i) g.lineTo(px, py); else g.moveTo(px, py); }
       g.strokePath();
     } });
   }
@@ -4712,7 +4726,22 @@ class Game extends Phaser.Scene {
   }
   dust(x, y) { for (let i = 0; i < 5; i++) { const ox = rand(-20, 20), sz = rand(6, 12); this.effects.push({ t: 0, dur: 0.4, draw: (g, k) => { g.fillStyle(0x8a7a60, 0.4 * (1 - k)); g.fillCircle(x + ox * (1 + k), y - 6 - k * 14, sz * (1 + k)); } }); } }
   crack(x, y) { const segs = []; for (let i = 0; i < 6; i++) segs.push([rand(-60, 60), rand(-14, 14), rand(-60, 60), rand(-14, 14)]); this.effects.push({ t: 0, dur: 0.8, ground: true, draw: (g, k) => { g.lineStyle(3, 0x1a120a, 0.8 * (1 - k)); g.beginPath(); for (const s of segs) { g.moveTo(x + s[0] * 0.2, y + s[1] * 0.2); g.lineTo(x + s[2], y + s[3]); } g.strokePath(); } }); }
-  afterimage(x, y, f) { const cls = this.cls; this.effects.push({ t: 0, dur: 0.3, draw: (g, k) => { g.fillStyle(cls.trim, 0.45 * (1 - k)); g.fillRect(x - 12, y - 60, 24, 60); g.fillCircle(x, y - 70, 10); } }); }
+  afterimage(x, y, f) { if (this.ghost(this.player, this.cls.trim)) return; const cls = this.cls; this.effects.push({ t: 0, dur: 0.3, draw: (g, k) => { g.fillStyle(cls.trim, 0.45 * (1 - k)); g.fillRect(x - 12, y - 60, 24, 60); g.fillCircle(x, y - 70, 10); } }); }
+  ghost(o, tint) {
+    const sp = o.aspr; if (!sp || !sp.visible) return false;
+    const gi = this.add.image(sp.x, sp.y, sp.texture.key, sp.frame.name).setOrigin(sp.originX, sp.originY).setScale(sp.scaleX, sp.scaleY).setTint(tint).setAlpha(0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(sp.depth - 1);
+    this.tweens.add({ targets: gi, alpha: 0, duration: 280, onComplete: () => gi.destroy() });
+    return true;
+  }
+  // arrow rain: one arrow drops from the sky onto (x, y) and sparks on impact
+  dropArrow(x, y) {
+    if (!this.textures.exists('fx_arrow')) return;
+    const a = this.add.image(x + 46, y - 330, 'fx_arrow').setBlendMode(Phaser.BlendModes.ADD).setRotation(Math.PI / 2 - 0.14).setScale(0.3 * ART_S).setDepth(y + 8);
+    this.tweens.add({ targets: a, x, y: y - 12, duration: 230, ease: 'Quad.in', onComplete: () => {
+      a.destroy(); this.fxSprite('fx_hit', x, y - 8, { sx: 0.14, sy: 0.1, rot: rand(0, 6.28), dur: 0.14, grow: 1.4, tint: 0xd8f0a0 });
+      if (Math.random() < 0.3) this.dust(x, y);
+    } });
+  }
   dmgText(x, y, val, type) {
     const st = { normal: ['#ffffff', 22], crit: ['#ffb02e', 32], hurt: ['#ff5a5a', 22], poison: ['#8dff6a', 17], block: ['#d0d0d0', 18], rune: ['#bfe0ff', 18], burn: ['#ff9a3a', 17] }[type];
     const t = this.add.text(x + rand(-10, 10), y, String(val), TXT(st[1], st[0], { fontStyle: '900', strokeThickness: 5 })).setOrigin(0.5).setDepth(9500);
