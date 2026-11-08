@@ -165,6 +165,19 @@ const MAP_Y = -360, MAP_H = 900; // single maps are 900 px high: the painted flo
 const FONT = '"Noto Serif TC", "Songti TC", "PMingLiU", serif';
 const G = { game: null, ui: null, msgQ: [] };
 const TOUCH = { active: false, mx: 0, my: 0, held: {}, pressed: {} };
+/* phones sometimes never deliver the "finger lifted" event to the game (a dialogue or window popped up under the finger,
+   iOS cancelled the touch...). Then the joystick stayed "held" forever and no new touch could take it over: the hero
+   could not move. When the last finger leaves the screen, everything touch-held is released, whatever the game saw. */
+function releaseTouch() {
+  TOUCH.active = false; TOUCH.mx = TOUCH.my = 0; for (const k in TOUCH.held) TOUCH.held[k] = false;
+  const g = window.__game; if (!g) return;
+  for (const key of ['UI', 'Town']) { const sc = g.scene.getScene(key); if (sc) sc.joy = null; }
+  for (const ptr of g.input.pointers || []) if (ptr.wasTouch && ptr.isDown) { ptr.isDown = false; ptr.btnId = null; }
+}
+['touchend', 'touchcancel'].forEach(ev => window.addEventListener(ev, e => { if (!e.touches || e.touches.length === 0) setTimeout(releaseTouch, 0); }, { capture: true, passive: true }));
+window.addEventListener('blur', () => releaseTouch());
+// a pointer the game still thinks is down but that no longer is (cancelled touch): true when it is really gone
+const ptrGone = (scene, id) => !scene.input.manager.pointers.some(q => q.id === id && q.isDown);
 /* Physical-key layer: reads KeyboardEvent.code, so keys still work while a Chinese IME (e.g. Zhuyin, where 1 = ㄅ and 2 = ㄉ)
    is active — Phaser's own key objects only see keyCode 229 ("Process") in that case. */
 const RAW = {
@@ -2073,6 +2086,7 @@ class Town extends Phaser.Scene {
     const dt = Math.min(delta / 1000, 0.05), p = this.p, k = this.keys, JD = Phaser.Input.Keyboard.JustDown;
     let mx = 0, my = 0;
     NpcEv.tick(dt); Tut.update(dt); this.updateLed(dt, time);
+    if (this.joy && ptrGone(this, this.joy.id)) this.joy = null;
     { const tg = Tut.cur && Tut.cur.target && this.npcs.find(o => o.menu === Tut.cur.target); this.tutArrow.setVisible(!!tg); if (tg) this.tutArrow.setPosition(tg.x, tg.y + 30 + Math.sin(this.p.t * 8) * 6); }
     const kp = (key, code) => { const a = JD(key), b = RAW.jd(code); return a || b; };
     const kTalk = [kp(k.A, 'KeyA'), kp(k.ENTER, 'Enter'), kp(k.SPACE, 'Space')].some(Boolean), kChar = kp(k.C, 'KeyC');
@@ -5296,7 +5310,7 @@ class UI extends Phaser.Scene {
     SFX.resume();
     if (this.modal) return;
     for (const b of this.btns) if (Math.hypot(ptr.x - b.x, ptr.y - b.y) < b.r + 10) { TOUCH.pressed[b.id] = true; TOUCH.held[b.id] = true; ptr.btnId = b.id; return; }
-    if (ptr.wasTouch && ptr.x < W * 0.5 && !this.joy) { this.joy = { id: ptr.id, ox: ptr.x, oy: ptr.y, x: ptr.x, y: ptr.y }; TOUCH.active = true; TOUCH.mx = TOUCH.my = 0; }
+    if (ptr.wasTouch && ptr.x < W * 0.5 && (!this.joy || ptrGone(this, this.joy.id))) { this.joy = { id: ptr.id, ox: ptr.x, oy: ptr.y, x: ptr.x, y: ptr.y }; TOUCH.active = true; TOUCH.mx = TOUCH.my = 0; }
   }
   onMove(ptr) {
     if (!this.joy || ptr.id !== this.joy.id) return;
@@ -5367,6 +5381,8 @@ class UI extends Phaser.Scene {
   toTown(msg) { const k = G.game.clsKey; Save.write(); this.scene.stop('UI'); G.game.scene.start('Town', { cls: k, msg }); }
   toSelect() { Save.write(); this.scene.stop('UI'); G.game.scene.start('Select'); }
   update() {
+    if (this.joy && ptrGone(this, this.joy.id)) { this.joy = null; TOUCH.active = false; TOUCH.mx = TOUCH.my = 0; }
+    for (const id in TOUCH.held) if (TOUCH.held[id] && !this.input.manager.pointers.some(q => q.isDown && q.btnId === id)) TOUCH.held[id] = false;
     const gm = G.game; if (!gm || !gm.player || !gm.sys.isActive()) return;
     while (G.msgQ.length) this.handleMsg(G.msgQ.shift());
     const p = gm.player, c = gm.cls, g = this.g, g2 = this.g2; g.clear(); g2.clear();
