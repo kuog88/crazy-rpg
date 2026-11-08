@@ -21,12 +21,28 @@
   #panel .pbox { width: min(880px, 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--gold); border-radius: 10px; color: var(--fg); overflow: hidden; }
   #panel header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel2); }
   #panel h2 { margin: 0; font-size: 20px; color: #e9c46a; flex: 1; min-width: 0; }
-  #panel .pbody { overflow: auto; padding: 12px 16px 16px; font-size: 14px; line-height: 1.5; }
+  #panel .pbody { overflow: auto; padding: 12px 16px 16px; font-size: 14px; line-height: 1.5; touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   #panel button { font: inherit; font-size: 13px; color: var(--fg); background: #3a2e1d; border: 1px solid var(--gold); border-radius: 6px; padding: 5px 10px; cursor: pointer; min-height: 32px; }
   #panel button:hover:not(:disabled) { background: #5a4526; }
   #panel button:focus-visible { outline: 2px solid #e9c46a; outline-offset: 2px; }
   #panel button:disabled { opacity: .4; cursor: default; }
   #panel button.primary { background: #8a6a2a; }
+  /* character panel: body figure | selected item + bag + stats, reflowing for short phone screens */
+  .charlay { display: grid; grid-template-columns: minmax(190px, 300px) minmax(0, 1fr); gap: 14px; align-items: start; }
+  .charfig { position: relative; width: 100%; max-width: min(300px, 56vh); aspect-ratio: 3 / 4; margin: 0 auto; }
+  .bagrid { display: grid; grid-template-columns: repeat(5, var(--cell)); gap: 8px; justify-content: start; }
+  @media (max-width: 600px) { .charlay { grid-template-columns: 1fr; } }
+  @media (pointer: coarse) {
+    #panel button { min-height: 42px; padding: 8px 14px; font-size: 14px; }
+    #panel .row { padding: 8px 10px; }
+    #panel h2 { font-size: 17px; }
+  }
+  @media (max-height: 520px) {
+    #panel header { padding: 6px 12px; }
+    #panel .pbody { padding: 8px 12px 12px; }
+    #panel h2 { font-size: 16px; }
+    .sec h3 { margin: 2px 0 6px; }
+  }
   .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
   .cols > * { min-width: 0; }
   .sec h3 { margin: 4px 0 8px; font-size: 15px; color: #e9c46a; letter-spacing: .04em; }
@@ -1376,19 +1392,20 @@ Menus.char = function (cls) {
       return h('div', { style: `width:${size}px;height:${size}px;border:2px solid ${col};border-radius:8px;background:#1d1711;color:${it ? col : '#6a5a40'};position:relative;padding:8px;box-sizing:border-box;cursor:pointer`, title: it ? itemName(it) : label, html: (it ? iconImg(it) : `<div style="opacity:.35;width:100%;height:100%">${iconSVG(label)}</div>`) + (it && it.plus ? `<span style="position:absolute;right:3px;bottom:1px;font-size:11px;color:#ffd27a;font-weight:700">+${it.plus}</span>` : '') });
     };
     // body figure
-    const fig = h('div', { style: 'position:relative;width:100%;max-width:300px;aspect-ratio:3/4;margin:0 auto;background:radial-gradient(ellipse at 50% 60%, #2a2116 0%, #14100b 70%);border:1px solid var(--line);border-radius:10px;overflow:hidden' });
+    const SLOT = IS_TOUCH ? 64 : 58, CELL = IS_TOUCH ? 60 : 54;
+    const fig = h('div', { class: 'charfig', style: 'background:radial-gradient(ellipse at 50% 60%, #2a2116 0%, #14100b 70%);border:1px solid var(--line);border-radius:10px;overflow:hidden' });
     fig.append(h('img', { src: 'art/' + cls + '.webp', alt: CLASSES[cls].name, style: 'position:absolute;left:50%;bottom:6%;height:82%;transform:translateX(-50%);opacity:.85;pointer-events:none' }));
     for (const slot in SLOT_POS) {
       const [lx, ty] = SLOT_POS[slot], it = ch.equip[slot];
-      const box = slotBox(it, slot, 58);
-      box.style.position = 'absolute'; box.style.left = `calc(${lx}% - 29px)`; box.style.top = ty + '%';
+      const box = slotBox(it, slot, SLOT);
+      box.style.position = 'absolute'; box.style.left = `calc(${lx}% - ${SLOT / 2}px)`; box.style.top = ty + '%';
       if (sel && sel.where === 'equip' && sel.key === slot) box.style.boxShadow = '0 0 0 3px #e9c46a';
       box.addEventListener('click', () => { sel = { where: 'equip', key: slot }; Panel.refresh(); });
       const cap = h('div', { style: 'position:absolute;left:0;right:0;bottom:-18px;text-align:center;font-size:11px;color:var(--muted)' }, SLOTS[slot]);
       box.append(cap); fig.append(box);
     }
     // detail of selected
-    const detail = h('div', { class: 'sec', style: 'margin-top:26px' });
+    const detail = h('div', { class: 'sec' });
     const selIt = sel ? (sel.where === 'equip' ? ch.equip[sel.key] : ch.bag[sel.key]) : null;
     if (!selIt) detail.append(h('div', { class: 'muted' }, sel && sel.where === 'equip' ? SLOTS[sel.key] + '：空' : '點裝備欄或背包裡的裝備看詳細資料。'));
     else {
@@ -1399,9 +1416,9 @@ Menus.char = function (cls) {
       detail.append(row);
     }
     // bag grid
-    const grid = h('div', { style: 'display:grid;grid-template-columns:repeat(5, 54px);gap:8px;justify-content:start' });
+    const grid = h('div', { class: 'bagrid', style: `--cell:${CELL}px` });
     for (let i = 0; i < BAG_MAX; i++) {
-      const it = ch.bag[i], cell = it ? slotBox(it, it.slot, 54) : h('div', { style: 'width:54px;height:54px;border:1px dashed #3a3020;border-radius:8px' });
+      const it = ch.bag[i], cell = it ? slotBox(it, it.slot, CELL) : h('div', { style: `width:${CELL}px;height:${CELL}px;border:1px dashed #3a3020;border-radius:8px;box-sizing:border-box` });
       if (it) { if (sel && sel.where === 'bag' && sel.key === i) cell.style.boxShadow = '0 0 0 3px #e9c46a'; cell.addEventListener('click', () => { sel = { where: 'bag', key: i }; Panel.refresh(); }); }
       grid.append(cell);
     }
@@ -1415,9 +1432,9 @@ Menus.char = function (cls) {
       '未分配屬性點', ch.pts, '技能點', ch.sp),
       st.specials.size ? h('div', { class: 'muted', style: 'margin-top:6px' }, [...st.specials].map(s => '傳說特效：' + SPECIALS[s]).join('　')) : null,
       h('div', { class: 'muted', style: 'margin-top:6px' }, '屬性點和技能請找技能導師；強化、分解找鐵匠。'));
-    body.append(h('div', { class: 'cols' },
-      h('div', { class: 'sec' }, h('h3', null, '裝備'), fig, detail),
-      h('div', null, h('div', { class: 'sec' }, h('h3', null, `背包 ${ch.bag.length} / ${BAG_MAX}`), grid), h('div', { style: 'height:14px' }), stats)));
+    body.append(h('div', { class: 'charlay' },
+      h('div', { class: 'sec' }, h('h3', null, '裝備'), fig, h('div', { style: 'height:20px' })),
+      h('div', null, detail, h('div', { class: 'sec' }, h('h3', null, `背包 ${ch.bag.length} / ${BAG_MAX}`), grid), h('div', { style: 'height:14px' }), stats)));
   });
 };
 
@@ -2060,49 +2077,145 @@ class Town extends Phaser.Scene {
 }
 
 /* ================= SELECT SCENE ================= */
+/* ================= CLASS SELECT =================
+   One adventurer at a time: the character's own picture on the left, and on the right a showcase box that plays
+   their attacks and skills (each with its own animation) one after another. Swipe / arrows / ← → to change class,
+   then tap the button (or Enter) to start. */
+const SKILL_ANIM = { whirl: 'whirl', charge: 'charge', smash: 'smash', quake: 'smash', fireball: 'cast', nova: 'slam', beam: 'cast', meteor: 'raise',
+  bash: 'bash', roar: 'roar', wall: 'block', ram: 'ram', holyslash: 'atk1', heal: 'pray', aegis: 'pray', judge: 'judge',
+  flurry: 'flurry', leap: 'leap', bloodlust: 'roar', frenzy: 'roar', triple: 'shoot', backshot: 'backflip', blast: 'blast', rain: 'skyshot' };
+const DEF_ANIM = { roll: 'roll', block: 'block', dash: 'dash', backstep: 'backflip', light: 'pray' };
 class Select extends Phaser.Scene {
   constructor() { super('Select'); }
   preload() {
     const g = this.add.graphics(); g.fillStyle(0xc9a45c, 1);
     this.load.on('progress', v => { if (!g.scene) return; g.clear(); g.fillStyle(0xc9a45c, 1); g.fillRect(W / 2 - 150, H / 2, 300 * v, 4); });
     this.load.once('complete', () => { if (g.scene) g.destroy(); });
-    loadArt(this);
+    loadArt(this, CLASS_ORDER);
   }
   create() {
-    this.going = false;
-    const g = this.add.graphics();
-    g.fillGradientStyle(0x0e1715, 0x0e1715, 0x2a2219, 0x2a2219, 1); g.fillRect(0, 0, W, H);
-    this.add.text(W / 2, 52, '全員瘋子RPG', TXT(42, '#e9c46a', { fontStyle: '900' })).setOrigin(0.5);
-    this.add.text(W / 2, 98, '選擇職業　｜　每個職業的等級、裝備、倉庫各自獨立，金幣和能量碎片共用', TXT(15, '#c8bfa6')).setOrigin(0.5);
-    this.cards = [];
-    const CW = 296, CH = 166;
-    this.rects = [];
-    CLASS_ORDER.forEach((k, i) => {
-      const cls = CLASSES[k], cx = 165 + (i % 3) * 315, cy = 210 + Math.floor(i / 3) * 176;
-      const cg = this.add.graphics();
-      cg.fillStyle(0x14110d, 0.92); cg.fillRoundedRect(cx - CW / 2, cy - CH / 2, CW, CH, 10);
-      cg.lineStyle(2, cls.trim, 0.85); cg.strokeRoundedRect(cx - CW / 2, cy - CH / 2, CW, CH, 10);
-      let ch = null, img = null;
-      if (this.textures.exists('spr_' + k)) img = this.add.image(cx - 92, cy + 72, 'spr_' + k).setOrigin(0.5, 1).setScale(0.56);
-      else { ch = this.add.graphics(); ch.setPosition(cx - 92, cy + 66); ch.setScale(1.2); }
-      this.add.text(cx - 26, cy - 64, `${i + 1}　${cls.name}`, TXT(20, '#f2e6c4', { fontStyle: '900' }));
-      cls.desc.forEach((d, j) => this.add.text(cx - 26, cy - 30 + j * 20, d, TXT(11.5, '#c8bfa6', { wordWrap: { width: 170 } })));
-      const sv = Save.load().chars[k];
-      this.add.text(cx - 26, cy + 48, sv ? `Lv ${sv.lvl}　點這裡繼續` : '點這裡開始', TXT(13, '#e9c46a'));
-      this.cards.push({ ch, img, cls, e: { t: i * 1.3, z: 0, flash: 0, state: 'idle', vx: 0, vy: 0 } });
-      this.rects.push({ k, x0: cx - CW / 2, x1: cx + CW / 2, y0: cy - CH / 2, y1: cy + CH / 2 });
+    this.going = false; this.am = this.cache.json.get('anims');
+    const bg = this.add.graphics(); bg.fillGradientStyle(0x0e1715, 0x0e1715, 0x2a2219, 0x2a2219, 1); bg.fillRect(0, 0, W, H);
+    this.add.text(W / 2, 30, '全員瘋子RPG', TXT(32, '#e9c46a', { fontStyle: '900' })).setOrigin(0.5);
+    this.add.text(W / 2, 62, IS_TOUCH ? '左右滑動挑選冒險者，選好按「開始冒險」' : '← → 或滑鼠拖曳挑選冒險者，選好按 Enter 或「開始冒險」', TXT(13, '#a99f86')).setOrigin(0.5);
+    // left: the hero's own picture
+    this.glow = this.add.graphics();
+    this.idxT = this.add.text(240, 96, '', TXT(14, '#a99f86')).setOrigin(0.5);
+    this.nameT = this.add.text(240, 124, '', TXT(30, '#f2e6c4', { fontStyle: '900' })).setOrigin(0.5);
+    this.pic = this.add.image(240, 418, '__DEFAULT').setOrigin(0.5, 1);
+    this.tagT = this.add.text(240, 438, '', TXT(14, '#d8cba8')).setOrigin(0.5);
+    this.btnG = this.add.graphics(); this.btnT = this.add.text(240, 484, '', TXT(19, '#1b140c', { fontStyle: '900', stroke: '#f6e0a0', strokeThickness: 0 })).setOrigin(0.5);
+    this.btn = { x0: 135, x1: 345, y0: 460, y1: 508 };
+    this.arL = this.add.text(30, 280, '‹', TXT(72, '#e9c46a', { fontStyle: '900' })).setOrigin(0.5);
+    this.arR = this.add.text(450, 280, '›', TXT(72, '#e9c46a', { fontStyle: '900' })).setOrigin(0.5);
+    // right: skill showcase box
+    this.box = { x: 480, y: 88, w: 452, h: 330 };
+    this.boxG = this.add.graphics();
+    this.add.text(this.box.x + 18, this.box.y + 12, '技能展示', TXT(13, '#a99f86'));
+    this.hero = this.add.sprite(610, this.box.y + this.box.h - 34, '__DEFAULT').setVisible(false);
+    this.heroImg = null;
+    this.fxG = this.add.graphics().setDepth(5);
+    this.skT = this.add.text(722, this.box.y + 70, '', TXT(22, '#ffe9a8', { fontStyle: '900', wordWrap: { width: 196, useAdvancedWrap: true } }));
+    this.skD = this.add.text(722, this.box.y + 130, '', TXT(14, '#d8cba8', { wordWrap: { width: 196, useAdvancedWrap: true }, lineSpacing: 4 }));
+    this.sdG = this.add.graphics();
+    // stats under the box
+    this.statG = this.add.graphics(); this.statT = [];
+    for (let i = 0; i < 4; i++) this.statT.push(this.add.text(0, 0, '', TXT(13, '#d8cba8')));
+    this.dotG = this.add.graphics();
+    if (/[?&]test\b/.test(location.search)) { // developer shortcut, hidden from players
+      const tb = this.add.text(W - 14, 14, '［測試］滿裝滿技能法師', TXT(13, '#ff9a2e', { backgroundColor: '#14110d', padding: { x: 8, y: 5 } })).setOrigin(1, 0);
+      tb.setInteractive().on('pointerup', () => this.maxMage());
+    }
+    this.input.on('pointerdown', ptr => { this.down = { x: ptr.x, y: ptr.y }; SFX.resume(); });
+    this.input.on('pointerup', ptr => {
+      const d = this.down; this.down = null; if (!d) return;
+      const dx = ptr.x - d.x;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(ptr.y - d.y)) return this.step(dx < 0 ? 1 : -1); // swipe
+      const B = this.btn;
+      if (ptr.x > B.x0 && ptr.x < B.x1 && ptr.y > B.y0 && ptr.y < B.y1) return this.go(CLASS_ORDER[this.i]);
+      if (ptr.x < 70 && ptr.y > 150 && ptr.y < 420) return this.step(-1);
+      if (ptr.x > 410 && ptr.x < 475 && ptr.y > 150 && ptr.y < 420) return this.step(1);
+      for (let k = 0; k < 6; k++) if (Math.hypot(ptr.x - this.dotX(k), ptr.y - 526) < 14) return this.pick(k);
     });
-    const touch = window.matchMedia('(pointer:coarse)').matches;
-    this.add.text(W / 2, 492, touch ? '左半邊螢幕拖曳移動　右下按鈕攻擊、跳、閃避、技能　右上喝藥' : '方向鍵移動　攻擊 A　跳 空白鍵　閃避／格擋 S　技能 Q W E R　紅藥 1(ㄅ)　藍藥 2(ㄉ)　背包 B　（鍵盤 1～6 選職業）', TXT(13, '#a99f86')).setOrigin(0.5);
-    this.add.text(W / 2, 520, '角色、怪物、背景與逐格動作皆由即夢生成', TXT(12, '#7d7563')).setOrigin(0.5);
-    /* Test shortcut: replaces the mage save with a maxed one (skills Lv 10, +10 legendary gear). */
-    const tb = this.add.text(W - 14, 14, '［測試］滿裝滿技能法師', TXT(13, '#ff9a2e', { backgroundColor: '#14110d', padding: { x: 8, y: 5 } })).setOrigin(1, 0);
-    const tr = { x0: tb.x - tb.width, x1: tb.x, y0: tb.y, y1: tb.y + tb.height };
-    this.input.on('pointerdown', ptr => {
-      if (ptr.x > tr.x0 && ptr.x < tr.x1 && ptr.y > tr.y0 && ptr.y < tr.y1) { this.maxMage(); return; }
-      const r = this.rects.find(r => ptr.x > r.x0 && ptr.x < r.x1 && ptr.y > r.y0 && ptr.y < r.y1); if (r) this.go(r.k);
+    this.i = Math.max(0, CLASS_ORDER.indexOf(Save.shared.lastCls || CLASS_ORDER[0]));
+    this.show(0);
+  }
+  dotX(k) { return W / 2 - 75 + k * 30; }
+  step(d) { this.i = (this.i + d + 6) % 6; this.show(d); }
+  pick(k) { if (k === this.i) return; const d = k > this.i ? 1 : -1; this.i = k; this.show(d); }
+  show(dir) {
+    const k = CLASS_ORDER[this.i], cls = CLASSES[k], col = '#' + cls.trim.toString(16).padStart(6, '0');
+    this.k = k; this.cls = cls; SFX.tick();
+    this.idxT.setText(`${this.i + 1} / 6`); this.nameT.setText(cls.name).setColor(col); this.tagT.setText(cls.desc[0]);
+    // the picture: painted full-body art, sliding in from the swipe direction
+    if (this.textures.exists('spr_' + k)) {
+      const src = this.textures.get('spr_' + k).getSourceImage(); this.picS = 270 / src.height;
+      this.pic.setTexture('spr_' + k).setScale(this.picS).setVisible(true);
+    } else this.pic.setVisible(false);
+    this.pic.x = 240 + dir * 120; this.pic.setAlpha(dir ? 0 : 1);
+    if (dir) this.tweens.add({ targets: this.pic, x: 240, alpha: 1, duration: 260, ease: 'Quad.out' });
+    this.glow.clear(); this.glow.fillStyle(cls.trim, 0.16); this.glow.fillEllipse(240, 416, 230, 46); this.glow.fillStyle(cls.trim, 0.08); this.glow.fillEllipse(240, 300, 300, 300);
+    // showcase: basic attacks, the defence move, then the four skills, each with its own animation
+    const meta = this.meta = this.am && this.am[k] && this.textures.exists('anim_' + k) ? this.am[k] : null, A = meta ? meta.anims : {};
+    const dur = a => Math.max(0.55, A[a].f.length / A[a].fps) * (A[a].loop ? 2 : 1);
+    const seq = [];
+    if (A.atk1) ['atk1', 'atk2', 'atk3'].forEach((a, j) => A[a] && seq.push({ a, t: `普通攻擊 ${j + 1}`, d: j === 2 ? '連段第三擊，把敵人打飛' : '近戰連段，連按 A 一路打下去' }));
+    else { const b = A.cast ? 'cast' : A.shoot ? 'shoot' : null; if (b) seq.push({ a: b, t: '普通攻擊', d: cls.desc[0] }); }
+    const da = DEF_ANIM[cls.defense]; if (da && A[da]) seq.push({ a: da, t: `保命技　${cls.defName}`, d: cls.desc[1] });
+    cls.skills.forEach((sk, j) => { const a = SKILL_ANIM[sk.id]; if (A[a]) seq.push({ a, t: `${'QWER'[j]}　${sk.name}`, d: (SKILL_INFO[sk.id] || [''])[0] + `\n冷卻 ${sk.cd} 秒・魔力 ${sk.mp}` }); });
+    this.seq = seq.map(s => Object.assign(s, { dur: dur(s.a) }));
+    this.si = 0; this.cur = { a: 'idle', t: 0, dur: 0.5 };
+    if (meta) { this.hero.setTexture('anim_' + k, A.idle.f[0]).setOrigin(meta.ox, meta.oy).setScale(meta.scale * 1.85).setVisible(true); }
+    else this.hero.setVisible(false);
+    this.setSkill(this.seq[0]);
+    this.boxG.clear(); this.boxG.fillStyle(0x14110d, 0.92); this.boxG.fillRoundedRect(this.box.x, this.box.y, this.box.w, this.box.h, 12);
+    this.boxG.lineStyle(2, cls.trim, 0.8); this.boxG.strokeRoundedRect(this.box.x, this.box.y, this.box.w, this.box.h, 12);
+    this.boxG.fillStyle(cls.trim, 0.12); this.boxG.fillEllipse(610, this.box.y + this.box.h - 34, 190, 30);
+    const sv = Save.load().chars[k];
+    this.btnLabel = sv ? `繼續冒險（Lv ${sv.lvl}）▶` : '開始冒險 ▶'; this.btnT.setText(this.btnLabel);
+    this.barT = 0; this.dots();
+  }
+  setSkill(s) { this.skT.setText(s ? s.t : ''); this.skD.setText(s ? s.d : ''); this.skD.y = this.skT.y + this.skT.height + 10; }
+  dots() {
+    const g = this.dotG; g.clear();
+    for (let k = 0; k < 6; k++) { g.fillStyle(k === this.i ? this.cls.trim : 0x5a4a32, 1); g.fillCircle(this.dotX(k), 526, k === this.i ? 7 : 5); }
+  }
+  burst() { this.fx = { t: 0 }; }
+  update(t, dms) {
+    const dt = Math.min(dms / 1000, 0.05);
+    if (RAW.jd('ArrowLeft')) this.step(-1); if (RAW.jd('ArrowRight')) this.step(1);
+    if (RAW.jd('Enter') || RAW.jd('Space') || RAW.jd('KeyA')) this.go(this.k);
+    for (let i = 0; i < 6; i++) if (RAW.jd('Digit' + (i + 1))) this.pick(i);
+    // picture breathes; arrows bob; button pulses
+    if (this.pic.visible && this.picS) this.pic.setScale(this.picS, this.picS * (1 + Math.sin(t / 330) * 0.012));
+    this.arL.x = 30 - Math.abs(Math.sin(t / 300)) * 4; this.arR.x = 450 + Math.abs(Math.sin(t / 300)) * 4;
+    const B = this.btn, pul = 0.5 + 0.5 * Math.sin(t / 260); this.btnG.clear();
+    this.btnG.fillStyle(0xe9c46a, 0.85 + 0.15 * pul); this.btnG.fillRoundedRect(B.x0, B.y0, B.x1 - B.x0, B.y1 - B.y0, 24);
+    this.btnG.lineStyle(2, 0xfff1c0, 0.4 + 0.5 * pul); this.btnG.strokeRoundedRect(B.x0, B.y0, B.x1 - B.x0, B.y1 - B.y0, 24);
+    // showcase animation: idle -> next move -> idle -> ...
+    const c = this.cur; c.t += dt;
+    if (this.meta) {
+      const A = this.meta.anims[c.a] || this.meta.anims.idle, n = A.f.length; let f = Math.floor(c.t * A.fps);
+      f = (A.loop || c.a === 'idle') ? f % n : Math.min(n - 1, f); this.hero.setFrame(A.f[f]);
+    }
+    if (c.t >= c.dur && this.seq.length) {
+      if (c.a === 'idle') { const s = this.seq[this.si]; this.cur = { a: s.a, t: 0, dur: s.dur }; this.setSkill(s); this.burst(); }
+      else { this.si = (this.si + 1) % this.seq.length; this.cur = { a: 'idle', t: 0, dur: 0.75 }; }
+    }
+    // little impact ring when a move starts, and the showcase progress dots
+    const g = this.fxG; g.clear();
+    if (this.fx && this.fx.t < 0.45) { this.fx.t += dt; const k = this.fx.t / 0.45; g.lineStyle(3, this.cls.trim, 0.8 * (1 - k)); g.strokeEllipse(610, this.box.y + this.box.h - 34, 120 + 180 * k, 22 + 30 * k); }
+    const sg = this.sdG; sg.clear(); const n = this.seq.length, x0 = this.box.x + this.box.w / 2 - (n - 1) * 8;
+    for (let k = 0; k < n; k++) { sg.fillStyle(k === this.si ? 0xffe9a8 : 0x4a3e2c, 1); sg.fillCircle(x0 + k * 16, this.box.y + this.box.h - 12, k === this.si ? 4 : 3); }
+    // stat bars fill up whenever the class changes
+    this.barT += dt; const e = 1 - Math.pow(1 - Math.min(1, this.barT / 0.6), 3), C = this.cls;
+    const S = [['血量', C.hp, 700], ['魔力', C.mp, 230], ['攻擊', C.atk, 22], ['速度', C.speed, 250]], st = this.statG; st.clear();
+    S.forEach(([lab, v, mx], k) => {
+      const x = this.box.x + (k % 2) * 228, y = 436 + Math.floor(k / 2) * 34;
+      this.statT[k].setPosition(x, y - 2).setText(`${lab} ${v}`);
+      st.fillStyle(0x2a2218, 1); st.fillRoundedRect(x + 82, y + 3, 130, 10, 5);
+      st.fillStyle(C.trim, 1); st.fillRoundedRect(x + 82, y + 3, Math.max(10, 130 * Math.min(1, v / mx) * e), 10, 5);
     });
-    ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX'].forEach((n, i) => this.input.keyboard.on('keydown-' + n, () => this.go(CLASS_ORDER[i])));
   }
   maxMage() {
     if (this.going) return;
@@ -2119,18 +2232,10 @@ class Select extends Phaser.Scene {
   }
   go(k) {
     if (this.going) return; this.going = true;
-    SFX.resume();
-    try { if (window.matchMedia('(pointer:coarse)').matches && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {}
+    SFX.resume(); Save.shared.lastCls = k;
+    try { if (IS_TOUCH && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {}
     Save.ch(k);
     if (!Save.shared.trialDone) this.scene.start('Game', { cls: k, stage: 1, trial: true }); else this.scene.start('Town', { cls: k });
-  }
-  update(t, d) {
-    for (let i = 0; i < 6; i++) if (RAW.jd('Digit' + (i + 1))) this.go(CLASS_ORDER[i]); // also works with an IME on
-    for (const c of this.cards) {
-      c.e.t += d / 1000;
-      if (c.img) c.img.setScale(0.56, 0.56 * (1 + Math.sin(c.e.t * 3) * 0.015));
-      else { c.ch.clear(); drawHumanoid(c.ch, c.e, c.cls, {}); }
-    }
   }
 }
 
