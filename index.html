@@ -4041,7 +4041,8 @@ class Game extends Phaser.Scene {
       // collider sized from the drawn prop (scale 0.45): nearly its full width, a generous ground depth
       let w = P.w, d = P.d, hgt = P.h;
       if (this.textures.exists(key)) { const src = this.textures.get(key).getSourceImage(), dw = src.width * 0.45, dh = src.height * 0.45; w = Math.max(P.w, dw * 0.46); d = Math.max(24, P.d, dw * 0.17); hgt = Math.max(P.h, dh * 0.85); }
-      this.obstacles.push({ x, y: rand(GROUND_TOP + 50, GROUND_BOT - 34), w, d, h: hgt, key, img: null });
+      const oy = rand(GROUND_TOP + 50, GROUND_BOT - 34);
+      this.obstacles.push({ x, y: oy, w, d, h: Math.min(hgt, 88), y1: oy + d + 4, key, img: null }); // any prop can be jumped onto (a jump clears ~98)
       x += rand(420, 760);
     }
   }
@@ -4052,7 +4053,7 @@ class Game extends Phaser.Scene {
   pushOut(o, isEnemy, dt) {
     if (o.dead) return;
     for (const ob of this.obstacles) {
-      if (o.z > ob.h) continue;
+      if (o.z >= ob.h - 14) continue; // standing on (or above) it
       const hw = (o.hw || 16) * 0.6, dx = o.x - ob.x, dy = o.y - ob.y, px = ob.w + hw - Math.abs(dx), py = ob.d + 8 - Math.abs(dy);
       if (px <= 0 || py <= 0) continue;
       if (py < px) o.y += (Math.sign(dy) || 1) * py;
@@ -4129,17 +4130,31 @@ class Game extends Phaser.Scene {
   }
   floorAt(x, y) { let h = 0; for (const d of this.decks) if (x > d.x0 && x < d.x1 && y > d.y0 - 2 && y < d.y1 + 2 && d.h > h) h = d.h; return h; }
   /* Stand on whatever deck is under the feet (if high enough to be on top), otherwise the deck is a wall to push out of. */
+  /* Platforms and props you can stand on. Landing is forgiving about depth: if you are high enough and over the
+     platform left-to-right, a jump from the lane in front of it still lands, and you are eased onto its top surface,
+     so lining it up "visually" is enough. Below the top it is a wall. */
   deckCollide(o) {
     let fl = 0, on = null;
+    const m = (o.hw || 16) * 0.5, LAND = 90; // how far in front of a platform a jump still counts as landing on it
     for (const d of this.decks) {
-      const m = (o.hw || 16) * 0.5;
-      if (o.x <= d.x0 - m || o.x >= d.x1 + m || o.y >= d.y1 + 8) continue;
-      if (o.z >= d.h - 14) { if (o.x > d.x0 - 4 && o.x < d.x1 + 4 && o.y < d.y1 + 2 && d.h > fl) { fl = d.h; on = d; } continue; }
+      if (o.x <= d.x0 - m || o.x >= d.x1 + m) continue;
+      const high = o.z >= d.h - 14;
+      if (o.y >= d.y1 + (high ? LAND : 8)) continue;
+      if (high) { if (o.x > d.x0 - 4 && o.x < d.x1 + 4 && d.h > fl) { fl = d.h; on = d; } continue; }
       const px = Math.min(o.x - (d.x0 - m), d.x1 + m - o.x), py = d.y1 + 8 - o.y;
       if (px < py) o.x = o.x - (d.x0 - m) < d.x1 + m - o.x ? d.x0 - m : d.x1 + m; else o.y = d.y1 + 8;
     }
+    // props (fences, rocks, carts...): their top is a small platform too
+    if (this.obstacles) for (const ob of this.obstacles) {
+      if (Math.abs(o.x - ob.x) > ob.w + 4 || o.z < ob.h - 14) continue;
+      if (Math.abs(o.y - ob.y) > ob.d + (o.z > ob.h + 2 ? LAND * 0.6 : 10)) continue;
+      if (ob.h > fl) { fl = ob.h; on = ob; }
+    }
     o.fl = fl; o.deck = on;
-    if (on) o.y = Math.max(o.y, on.y1 - on.vd + 4); // stay on the painted walkway strip
+    if (on) { // ease onto the walkable strip instead of popping
+      const lo = on.kind ? on.y1 - on.vd + 4 : on.y - on.d, hi = on.kind ? on.y1 - 2 : on.y + on.d, ty = clamp(o.y, lo, hi);
+      o.y += (ty - o.y) * (o.z > fl + 4 ? 0.35 : 1);
+    }
     if (o.z < fl) { o.z = fl; if (o.vz < 0) o.vz = 0; }
   }
   keepOnDeck(e) {
@@ -4147,7 +4162,7 @@ class Game extends Phaser.Scene {
     e.x = clamp(e.x, d.x0 + 24, d.x1 - 24); e.y = clamp(e.y, d.y1 - d.vd + 6, d.y1 - 4); e.fl = d.h;
     if (e.z < d.h) { e.z = d.h; if (e.vz < 0) e.vz = 0; }
   }
-  depthOf(o) { return o.deck ? o.deck.y1 + 6 + (o.y - o.deck.y0) * 0.02 : o.y + 10; }
+  depthOf(o) { return o.deck ? o.deck.y1 + 6 + (o.y - (o.deck.y0 !== undefined ? o.deck.y0 : o.deck.y1 - 40)) * 0.02 : o.y + 10; }
   spawnSentries(d, decks) {
     const ranged = { 1: 'fish', 2: 'skelmage', 3: 'eyedemon' }[this.stageId] || 'skelmage', melee = { 1: ['hydra', 'fish'], 2: ['skel', 'wolf'], 3: ['imp', 'hellhound'] }[this.stageId] || ['skel'];
     const n = decks > 1 ? 2 : d.wave >= 8 ? 3 : 2;
